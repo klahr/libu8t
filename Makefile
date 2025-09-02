@@ -39,7 +39,7 @@ uninstall:
 	@rm -rf $(HEADER_INSTALL_DIR)/u8t
 
 clean:
-	rm -rf $(OBJ_DIR) $(BUILD_DIR)
+	rm -rf $(OBJ_DIR) $(BUILD_DIR) $(EXAMPLE) compile_commands.json
 
 debug: OPTFLAGS = -O0 -g -DDEBUG -fno-omit-frame-pointer
 debug: all
