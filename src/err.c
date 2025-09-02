@@ -2,8 +2,10 @@
 
 const char* u8t_err_str(u8t_err_t err) {
 	switch (err) {
-	case U8T_ERR_OK:
+	case U8T_OK:
 		return "No error";
+	case U8T_ERR_INVALID:
+		return "Invalid";
 	case U8T_ERR_UNEXPECTED:
 		return "Unexpected error";
 	default:

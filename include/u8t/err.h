@@ -8,7 +8,8 @@ extern "C" {
 #endif
 
 typedef enum {
-	U8T_ERR_OK = 0,
+	U8T_OK = 0,
+	U8T_ERR_INVALID,
 	U8T_ERR_UNEXPECTED,
 } u8t_err_t;
 

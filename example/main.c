@@ -9,12 +9,12 @@ int main(void) {
 	}
 
 	char buf[256] = { 0 };
-	u8t_token_t token = {
-		.text = buf,
-		.text_len = sizeof(buf)
-	};
+	u8t_token_t token;
+	if (u8t_token_init(&token, buf, sizeof(buf)) != U8T_OK) {
+		return 1;
+	}
 
-	while (u8t_scanner_scan(&scanner, &token) == 0) {
+	while (u8t_scanner_scan(&scanner, &token) == U8T_OK) {
 		printf("Token type: %d, text: '%s'\n", token.type, token.text);
 	}
 

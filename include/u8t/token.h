@@ -16,7 +16,7 @@ typedef struct u8t_token_t {
 	size_t text_len;
 } u8t_token_t;
 
-u8t_err_t u8t_token_init(u8t_token_t* token, int type, const char* dst, size_t n);
+u8t_err_t u8t_token_init(u8t_token_t* token, char* dst, size_t n);
 
 #ifdef __cplusplus
 }
