@@ -49,4 +49,7 @@ example: $(EXAMPLE)
 $(EXAMPLE): $(EXAMPLE_DIR)/main.c $(TARGET)
 	$(CC) -I./include -L$(BUILD_DIR) -lu8t -o $@ $<
 
-.PHONY: all clean install uninstall debug example
+compile_commands:
+	bear -- make clean all
+
+.PHONY: all clean install uninstall debug example compile_commands
