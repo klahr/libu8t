@@ -2,6 +2,9 @@ CC = gcc
 CFLAGS = -std=c23 -fPIC -I./include -Wall -Wextra -pedantic
 LDFLAGS = -shared
 
+OPTFLAGS ?= -O2 -DNDEBUG
+CFLAGS += $(OPTFLAGS)
+
 SRC_DIR = ./src
 OBJ_DIR = ./obj
 BUILD_DIR = ./lib
@@ -36,4 +39,7 @@ uninstall:
 clean:
 	rm -rf $(OBJ_DIR) $(BUILD_DIR)
 
-.PHONY: all clean install uninstall
+debug: OPTFLAGS = -O0 -g -DDEBUG -fno-omit-frame-pointer
+debug: all
+
+.PHONY: all clean install uninstall debug
