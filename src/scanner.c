@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 #include <u8t/scanner.h>
 
 void scanner_init_with_file(scanner_t* s, FILE* file) {

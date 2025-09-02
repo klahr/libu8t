@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 #ifndef U8T_TOKEN_H
 #define U8T_TOKEN_H
 
