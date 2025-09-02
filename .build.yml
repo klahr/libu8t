@@ -1,0 +1,8 @@
+image: archlinux
+sources:
+  - https://git.sr.ht/~klahr/libu8t
+tasks:
+  - build: |
+      cd libu8t
+      make
+
