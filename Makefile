@@ -8,10 +8,12 @@ CFLAGS += $(OPTFLAGS)
 SRC_DIR = ./src
 OBJ_DIR = ./obj
 BUILD_DIR = ./lib
+EXAMPLE_DIR = ./example
 INSTALL_DIR ?= /usr/lib
 HEADER_INSTALL_DIR ?= /usr/include
 
 TARGET = $(BUILD_DIR)/libu8t.so
+EXAMPLE = $(EXAMPLE_DIR)/example
 
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
@@ -42,4 +44,9 @@ clean:
 debug: OPTFLAGS = -O0 -g -DDEBUG -fno-omit-frame-pointer
 debug: all
 
-.PHONY: all clean install uninstall debug
+example: $(EXAMPLE)
+
+$(EXAMPLE): $(EXAMPLE_DIR)/main.c $(TARGET)
+	$(CC) -I./include -L$(BUILD_DIR) -lu8t -o $@ $<
+
+.PHONY: all clean install uninstall debug example

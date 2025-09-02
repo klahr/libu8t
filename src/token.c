@@ -2,6 +2,7 @@
 
 #include <u8t/token.h>
 
-void token_init(token_t* token, int type, const char* dst, size_t n) {
+u8t_err_t u8t_token_init(u8t_token_t* token, int type, const char* dst, size_t n) {
+	return U8T_ERR_OK;
 }
 
