@@ -14,6 +14,14 @@ int main(void) {
 		if (t == 0) {
 			break;
 		}
+
+		switch (t) {
+			case U8T_INTEGER:
+			case U8T_FLOAT:
+			case U8T_STRING:
+			default:
+				break;
+		}
 		size_t n;
 		printf("Token type: %c, text: '%s'\n", t, u8t_scanner_token_text(&scanner, &n));
 	}

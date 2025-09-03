@@ -10,6 +10,14 @@
 extern "C" {
 #endif
 
+enum {
+	U8T_EOF = 0,
+	U8T_IDENTIFIER,
+	U8T_INTEGER,
+	U8T_FLOAT,
+	U8T_STRING,
+};
+
 typedef struct scanner_t {
 	char* whitespaces;
 	const char* str;
