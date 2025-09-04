@@ -12,12 +12,11 @@ u8t_err_t u8t_scanner_init(u8t_scanner_t* s, const char* str, size_t len) {
 		return U8T_ERR_INVALID;
 	}
 
-	s->whitespaces = " \t\n\r";
 	s->str = str;
 	s->len = len;
 	s->cursor = 0;
 	s->line = 1;
-	s->col = 1;
+	s->offset = 0;
 	s->token_text[0] = '\0';
 	s->token_text_len = 0;
 
@@ -31,16 +30,25 @@ char u8t_scanner_scan(u8t_scanner_t* s) {
 		return U8T_EOF;
 	}
 
+	if (cp == U' ' || cp == U'\t' || cp == U'\r') {
+		s->str = next;
+		++s->cursor;
+		++s->offset;
+		return u8t_scanner_scan(s);
+	}
+
 	if (cp == U'\n') {
+		s->str = next;
+		++s->cursor;
+		s->offset = 0;
 		++s->line;
-		s->col = 1;
-	} else {
-		++s->col;
+		return u8t_scanner_scan(s);
 	}
 
 	char type = s->str[0];
 	s->str = next;
 	++s->cursor;
+	++s->offset;
 	return type;
 }
 

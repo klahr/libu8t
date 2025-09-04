@@ -26,7 +26,7 @@ int main(void) {
 				printf("Found a string: '%s'\n", u8t_scanner_token_text(&scanner, &n));
 				break;
 			default:
-				printf("Token type: %c, text: '%s' %zu:%zu\n", t, u8t_scanner_token_text(&scanner, &n), scanner.line, scanner.col);
+				printf("Token type: %c, text: '%s' %zu:%zu\n", t, u8t_scanner_token_text(&scanner, &n), scanner.line, scanner.offset);
 				break;
 		}
 
