@@ -4,6 +4,10 @@
 #include <string.h>
 #include "utf8.h"
 
+int is_digit(char32_t c) {
+	return c >= U'0' && c <= U'9';
+}
+
 u8t_err_t u8t_scanner_init(u8t_scanner_t* s, const char* str, size_t len) {
 	if (!s || !str || len == 0) {
 		return U8T_ERR_INVALID;
@@ -19,7 +23,6 @@ u8t_err_t u8t_scanner_init(u8t_scanner_t* s, const char* str, size_t len) {
 	s->line = 1;
 	s->offset = 0;
 	s->token_text[0] = '\0';
-	s->token_text_len = 0;
 
 	return U8T_OK;
 }
@@ -62,6 +65,30 @@ char32_t u8t_scanner_scan(u8t_scanner_t* s) {
 			next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 		}
 		type = U8T_STRING;
+	} else if (is_digit(cp)) {
+		utf8cat(s->token_text, (utf8_int8_t*)&cp);
+		int done = 0;
+		type = U8T_INTEGER;
+		while (!done) {
+			char32_t peek_cp = u8t_scanner_peek(s);
+			if (!is_digit(peek_cp)) {
+				// TODO: Support exponents
+				if (peek_cp == U'.') {
+					if (type == U8T_FLOAT) {
+						done = 1;
+						continue;
+					}
+					type = U8T_FLOAT;
+					utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
+				} else {
+					done = 1;
+				}
+			} else {
+				utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
+			}
+			s->str = next;
+			next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
+		}
 	} else {
 		type = cp;
 	}

@@ -2,7 +2,7 @@
 #include <string.h>
 
 int main(void) {
-	const char* src = "int main() {\n\tconst char* hello = \"Hiö!\"; const char* x = \"\";\n\treturn 0;\n}\n";
+	const char* src = "int main() {\n\tconst char* hello = \"Hiö!\"; const char* x = \"\";\n\tfloat df = 12.3e4;\n\tint x = 1234;\n\treturn 0;\n}\n";
 
 	u8t_scanner_t scanner;
 	if (u8t_scanner_init(&scanner, src, strlen(src)) != 0) {
