@@ -2,7 +2,7 @@
 #include <string.h>
 
 int main(void) {
-	const char* src = "int main() {\n\tretörn 0;\n}\n";
+	const char* src = "int main() {\n\tconst char* hello = \"Hiö!\"; const char* x = \"\";\n\treturn 0;\n}\n";
 
 	u8t_scanner_t scanner;
 	if (u8t_scanner_init(&scanner, src, strlen(src)) != 0) {
@@ -10,7 +10,7 @@ int main(void) {
 	}
 
 	while (1) {
-		char t = u8t_scanner_scan(&scanner);
+		char32_t t = u8t_scanner_scan(&scanner);
 		size_t n;
 		switch (t) {
 			case U8T_EOF:
@@ -23,10 +23,10 @@ int main(void) {
 				printf("Found a float: %s\n", u8t_scanner_token_text(&scanner, &n));
 				break;
 			case U8T_STRING:
-				printf("Found a string: '%s'\n", u8t_scanner_token_text(&scanner, &n));
+				printf("string: %s\n", u8t_scanner_token_text(&scanner, &n));
 				break;
 			default:
-				printf("Token type: %c, text: '%s' %zu:%zu\n", t, u8t_scanner_token_text(&scanner, &n), scanner.line, scanner.offset);
+				printf("token : %c, text: '%s' %zu:%zu\n", t, u8t_scanner_token_text(&scanner, &n), scanner.line, scanner.offset);
 				break;
 		}
 

@@ -47,7 +47,7 @@ debug: all
 example: $(EXAMPLE)
 
 $(EXAMPLE): $(EXAMPLE_DIR)/main.c $(TARGET)
-	$(CC) -I./include -L$(BUILD_DIR) -lu8t -o $@ $<
+	$(CC) -O0 -g -I./include -L$(BUILD_DIR) -lu8t -o $@ $<
 
 compile_commands:
 	bear -- make clean all
