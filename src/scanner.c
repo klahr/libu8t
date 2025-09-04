@@ -68,6 +68,7 @@ char32_t u8t_scanner_scan(u8t_scanner_t* s) {
 	} else if (is_digit(cp)) {
 		utf8cat(s->token_text, (utf8_int8_t*)&cp);
 		int done = 0;
+		int has_exponent = 0;
 		type = U8T_INTEGER;
 		while (!done) {
 			char32_t peek_cp = u8t_scanner_peek(s);
@@ -80,6 +81,13 @@ char32_t u8t_scanner_scan(u8t_scanner_t* s) {
 					}
 					type = U8T_FLOAT;
 					utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
+				} else if (peek_cp == U'e' || peek_cp == U'E') {
+					if (has_exponent) {
+						done = 1;
+						continue;
+					}
+					utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
+					has_exponent = 1;
 				} else {
 					done = 1;
 				}
