@@ -23,6 +23,8 @@ typedef struct scanner_t {
 	const char* str;
 	size_t len;
 	size_t cursor;
+	size_t line;
+	size_t col;
 	size_t token_text_len;
 	char token_text[256];
 } u8t_scanner_t;
