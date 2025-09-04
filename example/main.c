@@ -17,16 +17,19 @@ int main(void) {
 				printf("Found end of file: %s\n", u8t_scanner_token_text(&scanner, &n));
 				break;
 			case U8T_INTEGER:
-				printf("Found an integer: %s\n", u8t_scanner_token_text(&scanner, &n));
+				printf("int   : %s\n", u8t_scanner_token_text(&scanner, &n));
 				break;
 			case U8T_FLOAT:
-				printf("Found a float: %s\n", u8t_scanner_token_text(&scanner, &n));
+				printf("float : %s\n", u8t_scanner_token_text(&scanner, &n));
 				break;
 			case U8T_STRING:
 				printf("string: %s\n", u8t_scanner_token_text(&scanner, &n));
 				break;
+			case U8T_IDENTIFIER:
+				printf("ident : %s\n", u8t_scanner_token_text(&scanner, &n));
+				break;
 			default:
-				printf("token : %c, text: '%s' %zu:%zu\n", t, u8t_scanner_token_text(&scanner, &n), scanner.line, scanner.offset);
+				printf("token : %c %zu:%zu\n", t, scanner.line, scanner.offset);
 				break;
 		}
 

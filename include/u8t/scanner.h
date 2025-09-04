@@ -25,8 +25,8 @@ typedef struct scanner_t {
 	size_t cursor;
 	size_t line;
 	size_t offset;
-	size_t token_text_len;
 	char token_text[256];
+	int (*is_identifier_start)(char32_t c);
 } u8t_scanner_t;
 
 u8t_err_t u8t_scanner_init(u8t_scanner_t* s, const char* str, size_t len);

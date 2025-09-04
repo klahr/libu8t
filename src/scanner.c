@@ -8,6 +8,10 @@ int is_digit(char32_t c) {
 	return c >= U'0' && c <= U'9';
 }
 
+int is_identifier_start(char32_t c) {
+	return (c >= U'a' && c <= U'z') || (c >= U'A' && c <= U'Z') || c == U'_';
+}
+
 u8t_err_t u8t_scanner_init(u8t_scanner_t* s, const char* str, size_t len) {
 	if (!s || !str || len == 0) {
 		return U8T_ERR_INVALID;
@@ -23,6 +27,7 @@ u8t_err_t u8t_scanner_init(u8t_scanner_t* s, const char* str, size_t len) {
 	s->line = 1;
 	s->offset = 0;
 	s->token_text[0] = '\0';
+	s->is_identifier_start = is_identifier_start;
 
 	return U8T_OK;
 }
@@ -73,7 +78,6 @@ char32_t u8t_scanner_scan(u8t_scanner_t* s) {
 		while (!done) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (!is_digit(peek_cp)) {
-				// TODO: Support exponents
 				if (peek_cp == U'.') {
 					if (type == U8T_FLOAT) {
 						done = 1;
@@ -96,6 +100,20 @@ char32_t u8t_scanner_scan(u8t_scanner_t* s) {
 			}
 			s->str = next;
 			next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
+		}
+	} else if (s->is_identifier_start(cp)) {
+		utf8cat(s->token_text, (utf8_int8_t*)&cp);
+		int done = 0;
+		type = U8T_IDENTIFIER;
+		while (!done) {
+			char32_t peek_cp = u8t_scanner_peek(s);
+			if (s->is_identifier_start(peek_cp) || is_digit(peek_cp)) {
+				utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
+				s->str = next;
+				next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
+			} else {
+				done = 1;
+			}
 		}
 	} else {
 		type = cp;
