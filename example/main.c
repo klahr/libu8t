@@ -4,7 +4,7 @@
 int main(void) {
 	const char* src = "int main() {\n\tconst char* hello = \"Hiö!\"; const char* x = \"\";\n\tfloat df = 12.3E4e;\n\tint x = 1234;\n\treturn 0;\n}\n";
 
-	u8t_scanner_t scanner;
+	u8t_scanner scanner;
 	if (u8t_scanner_init(&scanner, src, strlen(src)) != 0) {
 		return 1;
 	}

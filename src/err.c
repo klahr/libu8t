@@ -1,6 +1,6 @@
 #include <u8t/err.h>
 
-const char* u8t_err_str(u8t_err_t err) {
+const char* u8t_err_str(u8t_err err) {
 	switch (err) {
 	case U8T_OK:
 		return "No error";

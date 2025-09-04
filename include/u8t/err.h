@@ -11,9 +11,9 @@ typedef enum {
 	U8T_OK = 0,
 	U8T_ERR_INVALID,
 	U8T_ERR_UNEXPECTED,
-} u8t_err_t;
+} u8t_err;
 
-const char* u8t_err_str(u8t_err_t err);
+const char* u8t_err_str(u8t_err err);
 
 #ifdef __cplusplus
 }

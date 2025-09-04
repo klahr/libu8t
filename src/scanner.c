@@ -12,7 +12,7 @@ int is_identifier_start(char32_t c) {
 	return (c >= U'a' && c <= U'z') || (c >= U'A' && c <= U'Z') || c == U'_';
 }
 
-u8t_err_t u8t_scanner_init(u8t_scanner_t* s, const char* str, size_t len) {
+u8t_err u8t_scanner_init(u8t_scanner* s, const char* str, size_t len) {
 	if (!s || !str || len == 0) {
 		return U8T_ERR_INVALID;
 	}
@@ -32,7 +32,7 @@ u8t_err_t u8t_scanner_init(u8t_scanner_t* s, const char* str, size_t len) {
 	return U8T_OK;
 }
 
-char32_t u8t_scanner_scan(u8t_scanner_t* s) {
+char32_t u8t_scanner_scan(u8t_scanner* s) {
 	s->token_text[0] = '\0';
 
 	utf8_int32_t cp;
@@ -125,14 +125,14 @@ char32_t u8t_scanner_scan(u8t_scanner_t* s) {
 	return type;
 }
 
-char32_t u8t_scanner_peek(u8t_scanner_t* s) {
+char32_t u8t_scanner_peek(u8t_scanner* s) {
 	utf8_int32_t cp;
 	const char* next = (const char*)utf8codepoint((const utf8_int8_t*)s->str, &cp);
 	utf8codepoint((const utf8_int8_t*)next, &cp);
 	return cp;
 }
 
-const char* u8t_scanner_token_text(u8t_scanner_t* s, size_t* n) {
+const char* u8t_scanner_token_text(u8t_scanner* s, size_t* n) {
 	*n = strlen(s->token_text);
 	return s->token_text;
 }

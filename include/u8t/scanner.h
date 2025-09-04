@@ -19,7 +19,7 @@ enum {
 	U8T_STRING,
 };
 
-typedef struct scanner_t {
+typedef struct u8t_scanner {
 	const char* str;
 	size_t len;
 	size_t cursor;
@@ -27,12 +27,12 @@ typedef struct scanner_t {
 	size_t offset;
 	char token_text[256];
 	int (*is_identifier_start)(char32_t c);
-} u8t_scanner_t;
+} u8t_scanner;
 
-u8t_err_t u8t_scanner_init(u8t_scanner_t* s, const char* str, size_t len);
-char32_t u8t_scanner_scan(u8t_scanner_t* s);
-char32_t u8t_scanner_peek(u8t_scanner_t* s);
-const char* u8t_scanner_token_text(u8t_scanner_t* s, size_t* n);
+u8t_err u8t_scanner_init(u8t_scanner* s, const char* str, size_t len);
+char32_t u8t_scanner_scan(u8t_scanner* s);
+char32_t u8t_scanner_peek(u8t_scanner* s);
+const char* u8t_scanner_token_text(u8t_scanner* s, size_t* n);
 
 #ifdef __cplusplus
 }
