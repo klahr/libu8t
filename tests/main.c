@@ -9,11 +9,12 @@ TEST(Something) {
 	size_t n;
 	t = u8t_scanner_scan(s);
 	ASSERT(U8T_IDENTIFIER == t, "Expected identifier");
+	ASSERT_STR_EQ("Hello", u8t_scanner_token_text(s, &n), "Expected identifier 'Hello'");
 	t = u8t_scanner_scan(s);
 	ASSERT(U',' == t, "Expected comma");
 	t = u8t_scanner_scan(s);
 	ASSERT(U8T_STRING == t, "Expected string");
-	ASSERT_STR_EQ("string", u8t_scanner_token_text(s, &n), "Expected string 'string'");
+	ASSERT(strcmp("世界", u8t_scanner_token_text(s, &n)), "Expected string '世界'");
 	t = u8t_scanner_scan(s);
 	ASSERT(U8T_INTEGER == t, "Expected integer");
 	ASSERT_STR_EQ("123", u8t_scanner_token_text(s, &n), "Expected integer '123'");
