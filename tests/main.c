@@ -2,7 +2,7 @@
 #include <u8t/scanner.h>
 
 TEST(Something) {
-	const char* str = "Hello, \"世界!\" 123 45.67 _varName \"string\"";
+	const char* str = "Hello,\n \"世🙂界!\" 123 45.67 _varName \"string\"";
 	u8t_scanner* s = u8t_scanner_new(str, strlen(str));
 
 	char32_t t;
@@ -10,11 +10,13 @@ TEST(Something) {
 	t = u8t_scanner_scan(s);
 	ASSERT(U8T_IDENTIFIER == t, "Expected identifier");
 	ASSERT_STR_EQ("Hello", u8t_scanner_token_text(s, &n), "Expected identifier 'Hello'");
+	ASSERT(u8t_scanner_line(s) == 1, "Expected line 1");
 	t = u8t_scanner_scan(s);
 	ASSERT(U',' == t, "Expected comma");
 	t = u8t_scanner_scan(s);
 	ASSERT(U8T_STRING == t, "Expected string");
-	ASSERT(strcmp("世界", u8t_scanner_token_text(s, &n)), "Expected string '世界'");
+	ASSERT(strcmp("世🙂界", u8t_scanner_token_text(s, &n)), "Expected string '世🙂界'");
+	ASSERT(u8t_scanner_line(s) == 2, "Expected line 2");
 	t = u8t_scanner_scan(s);
 	ASSERT(U8T_INTEGER == t, "Expected integer");
 	ASSERT_STR_EQ("123", u8t_scanner_token_text(s, &n), "Expected integer '123'");
