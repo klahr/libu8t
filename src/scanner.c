@@ -87,6 +87,8 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			} else {
 				utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
 			}
+			++s->cursor;
+			++s->offset;
 			s->str = next;
 			next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 		}
@@ -119,6 +121,8 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			} else {
 				utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
 			}
+			++s->cursor;
+			++s->offset;
 			s->str = next;
 			next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 		}
@@ -130,6 +134,8 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (s->is_identifier_start(peek_cp) || is_digit(peek_cp)) {
 				utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
+				++s->cursor;
+				++s->offset;
 				s->str = next;
 				next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 			} else {
