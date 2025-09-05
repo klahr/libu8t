@@ -4,6 +4,16 @@
 #include <string.h>
 #include "utf8.h"
 
+typedef struct u8t_scanner {
+	const char* str;
+	size_t len;
+	size_t cursor;
+	size_t line;
+	size_t offset;
+	char token_text[256];
+	int (*is_identifier_start)(char32_t c);
+} u8t_scanner;
+
 int is_digit(char32_t c) {
 	return c >= U'0' && c <= U'9';
 }

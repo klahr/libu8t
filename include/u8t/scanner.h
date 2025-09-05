@@ -5,7 +5,6 @@
 
 #include <stdio.h>
 #include <uchar.h>
-#include "err.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,15 +18,8 @@ enum {
 	U8T_STRING,
 };
 
-typedef struct u8t_scanner {
-	const char* str;
-	size_t len;
-	size_t cursor;
-	size_t line;
-	size_t offset;
-	char token_text[256];
-	int (*is_identifier_start)(char32_t c);
-} u8t_scanner;
+struct u8t_scanner;
+typedef struct u8t_scanner u8t_scanner;
 
 u8t_scanner* u8t_scanner_new(const char* str, size_t len);
 void u8t_scanner_free(u8t_scanner* s);
