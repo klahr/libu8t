@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
 #include <u8t/err.h>
 
 const char* u8t_err_str(u8t_err err) {
