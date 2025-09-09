@@ -3,7 +3,12 @@ packages:
   - valgrind
 sources:
   - https://git.sr.ht/~klahr/libu8t
+  - https://git.sr.ht/~klahr/unit-check
 tasks:
+  - setup: |
+      cd unit-check
+      make
+      sudo make install
   - build: |
       cd libu8t
       make
