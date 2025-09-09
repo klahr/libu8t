@@ -61,7 +61,15 @@ int main(void) {
 }
 ```
 ```bash
-$ gcc -o example -lu8t example.c && ./example
+$ gcc -o example -lu8t example.c
+```
+```bash
+$ ./example
+Identifier: var
+Identifier: x
+Token     : =
+Integer   : 42
+Token     : ;
 ```
 
 ## Maintainers
