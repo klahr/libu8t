@@ -118,6 +118,8 @@ TEST(Scanner) {
 
 	t = u8t_scanner_scan(s);
 	ASSERT_EQ(U8T_EOF, t, "Expected EOF");
+
+	u8t_scanner_free(s);
 }
 
 int main(void) {
