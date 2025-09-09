@@ -10,6 +10,10 @@
 extern "C" {
 #endif
 
+#ifndef U8T_SCANNER_MAX_TOKEN_LEN
+#define U8T_SCANNER_MAX_TOKEN_LEN 2048
+#endif
+
 enum {
 	U8T_EOF = 0,
 	U8T_IDENTIFIER,
