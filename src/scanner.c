@@ -7,10 +7,9 @@
 typedef struct u8t_scanner {
 	const char* str;
 	size_t len;
-	size_t cursor;
-	size_t line;
-	size_t offset;
-	char token_text[256];
+	size_t token_start;
+	size_t token_len;
+	char token_text[2048];
 	int (*is_identifier_start)(char32_t c);
 } u8t_scanner;
 
@@ -38,9 +37,8 @@ u8t_scanner* u8t_scanner_new(const char* str, size_t len) {
 
 	s->str = str;
 	s->len = len;
-	s->cursor = 0;
-	s->line = 1;
-	s->offset = 0;
+	s->token_start = 0;
+	s->token_len = 0;
 	s->token_text[0] = '\0';
 	s->is_identifier_start = is_identifier_start;
 
@@ -55,6 +53,8 @@ void u8t_scanner_free(u8t_scanner* s) {
 
 char32_t u8t_scanner_scan(u8t_scanner* s) {
 	s->token_text[0] = '\0';
+	s->token_start += s->token_len;
+	s->token_len = 0;
 
 	utf8_int32_t cp;
 	const char* next = (const char*)utf8codepoint((const utf8_int8_t*)s->str, &cp);
@@ -64,91 +64,91 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 
 	if (cp == U' ' || cp == U'\t' || cp == U'\r') {
 		s->str = next;
-		++s->cursor;
-		++s->offset;
+		s->token_text[0] = cp;
+		s->token_len = 1;
 		return u8t_scanner_scan(s);
 	}
 
 	if (cp == U'\n') {
 		s->str = next;
-		++s->cursor;
-		s->offset = 0;
-		++s->line;
+		s->token_text[0] = '\n';
+		s->token_len = 1;
 		return u8t_scanner_scan(s);
 	}
 
 	char32_t type;
 	if (cp == U'"') {
+		utf8cat(s->token_text, (utf8_int8_t*)&cp);
+		++s->token_len;
 		int done = 0;
 		while (!done) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (peek_cp == U'"' || peek_cp == 0) {
 				done = 1;
-			} else {
-				utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
 			}
-			++s->cursor;
-			++s->offset;
+			utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
+			++s->token_len;
 			s->str = next;
 			next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 		}
 		type = U8T_STRING;
 	} else if (is_digit(cp)) {
 		utf8cat(s->token_text, (utf8_int8_t*)&cp);
+		++s->token_len;
 		int done = 0;
 		int has_exponent = 0;
 		type = U8T_INTEGER;
-		while (!done) {
+		for (;;) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (!is_digit(peek_cp)) {
 				if (peek_cp == U'.') {
 					if (type == U8T_FLOAT) {
-						done = 1;
-						continue;
+						break;
 					}
 					type = U8T_FLOAT;
 					utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
+					++s->token_len;
 				} else if (peek_cp == U'e' || peek_cp == U'E') {
 					if (has_exponent) {
-						done = 1;
-						continue;
+						break;
 					}
 					utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
+					++s->token_len;
 					has_exponent = 1;
 				} else {
-					done = 1;
+					break;
 				}
 			} else {
 				utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
+				++s->token_len;
 			}
-			++s->cursor;
-			++s->offset;
 			s->str = next;
 			next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 		}
 	} else if (s->is_identifier_start(cp)) {
 		utf8cat(s->token_text, (utf8_int8_t*)&cp);
+		++s->token_len;
 		int done = 0;
 		type = U8T_IDENTIFIER;
 		while (!done) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (s->is_identifier_start(peek_cp) || is_digit(peek_cp)) {
 				utf8cat(s->token_text, (utf8_int8_t*)&peek_cp);
-				++s->cursor;
-				++s->offset;
 				s->str = next;
 				next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
+				++s->token_len;
 			} else {
 				done = 1;
 			}
 		}
 	} else {
 		type = cp;
+		s->token_text[0] = (char)cp;
+		s->token_text[1] = '\0';
+		s->token_len = 1;
 	}
 
 	s->str = next;
-	++s->cursor;
-	++s->offset;
 	return type;
 }
 
@@ -164,17 +164,17 @@ const char* u8t_scanner_token_text(u8t_scanner* s, size_t* n) {
 	return s->token_text;
 }
 
-size_t u8t_scanner_line(u8t_scanner* s) {
+size_t u8t_scanner_token_start(u8t_scanner* s) {
 	if (!s) {
 		return 0;
 	}
-	return s->line;
+	return s->token_start;
 }
 
-size_t u8t_scanner_offset(u8t_scanner* s) {
+size_t u8t_scanner_token_len(u8t_scanner* s) {
 	if (!s) {
 		return 0;
 	}
-	return s->offset;
+	return s->token_len;
 }
 

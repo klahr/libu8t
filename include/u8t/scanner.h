@@ -26,8 +26,8 @@ void u8t_scanner_free(u8t_scanner* s);
 char32_t u8t_scanner_scan(u8t_scanner* s);
 char32_t u8t_scanner_peek(u8t_scanner* s);
 const char* u8t_scanner_token_text(u8t_scanner* s, size_t* n);
-size_t u8t_scanner_line(u8t_scanner* s);
-size_t u8t_scanner_offset(u8t_scanner* s);
+size_t u8t_scanner_token_start(u8t_scanner* s);
+size_t u8t_scanner_token_len(u8t_scanner* s);
 
 #ifdef __cplusplus
 }

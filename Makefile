@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=c23 -fPIC -I./include -Wall -Wextra -pedantic
+CFLAGS = -std=c23 -fPIC -I./include -Wall -Wextra -pedantic -finput-charset=UTF-8
 LDFLAGS = -shared
 
 OPTFLAGS ?= -O2 -DNDEBUG
