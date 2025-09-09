@@ -2,7 +2,7 @@
 #include <string.h>
 
 int main(void) {
-	const char* src = "int main() {\n\tconst char* hello = \"Hiö!\"; const char* x = \"\";\n\tfloat df = 12.3E4e;\n\tint x = 1234;\n\treturn 0;\n}\n";
+	const char* src = "int main() {\n\tconst char* hello = \"Hiö!\"; const char* x = \"\";\n\tfloat df = -12.3E4e;\n\tint x = 1234;\n\treturn 0;\n}\n";
 
 	u8t_scanner* scanner = u8t_scanner_new(src, strlen(src));
 	if (!scanner) {
@@ -29,7 +29,7 @@ int main(void) {
 				printf("ident : %s\n", u8t_scanner_token_text(scanner, &n));
 				break;
 			default:
-				printf("token : %c %zu:%zu\n", t, u8t_scanner_line(scanner), u8t_scanner_offset(scanner));
+				printf("token : %c\n", t);
 				break;
 		}
 

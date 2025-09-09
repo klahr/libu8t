@@ -112,7 +112,6 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			s->token_truncated = 1;
 		}
 		++s->token_len;
-		int done = 0;
 		int has_exponent = 0;
 		type = U8T_INTEGER;
 		for (;;) {
