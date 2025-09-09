@@ -92,7 +92,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 		}
 		type = U8T_STRING;
-	} else if (is_digit(cp)) {
+	} else if (is_digit(cp) || (cp == U'-' && is_digit(u8t_scanner_peek(s)))) {
 		utf8cat(s->token_text, (utf8_int8_t*)&cp);
 		++s->token_len;
 		int done = 0;
