@@ -54,7 +54,7 @@ void u8t_scanner_free(u8t_scanner* s) {
 	}
 }
 
-static size_t u8t_scanner_remaining(u8t_scanner* s) {
+static size_t u8t_scanner_remaining(const u8t_scanner* s) {
 	if (!s) {
 		return 0u;
 	}
