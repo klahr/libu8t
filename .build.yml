@@ -1,8 +1,15 @@
 image: archlinux
+packages:
+  - valgrind
 sources:
   - https://git.sr.ht/~klahr/libu8t
 tasks:
   - build: |
       cd libu8t
       make
+  - test: |
+      cd libu8t
+      cd tests
+      make
+      valgrind --leak-check=full ./tests
 
