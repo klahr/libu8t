@@ -1,12 +1,16 @@
 image: archlinux
 packages:
   - valgrind
+  - cmake
 sources:
   - https://git.sr.ht/~klahr/libu8t
   - https://git.sr.ht/~klahr/unit-check
 tasks:
   - setup: |
       cd unit-check
+      mkdir -p build
+      cd build
+      cmake ..
       make
       sudo make install
   - build: |
