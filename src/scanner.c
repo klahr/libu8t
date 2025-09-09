@@ -9,7 +9,6 @@
 
 typedef struct u8t_scanner {
 	const char* str;
-	size_t len;
 	size_t token_start;
 	size_t token_len;
 	bool token_truncated;
@@ -25,8 +24,8 @@ static bool is_identifier_start_default(char32_t c) {
 	return (c >= U'a' && c <= U'z') || (c >= U'A' && c <= U'Z') || c == U'_';
 }
 
-u8t_scanner* u8t_scanner_new(const char* str, size_t len) {
-	if (!str || len == 0) {
+u8t_scanner* u8t_scanner_new(const char* str) {
+	if (!str) {
 		return NULL;
 	}
 
@@ -40,9 +39,8 @@ u8t_scanner* u8t_scanner_new(const char* str, size_t len) {
 	}
 
 	s->str = str;
-	s->len = len;
-	s->token_start = 0;
-	s->token_len = 0;
+	s->token_start = 0u;
+	s->token_len = 0u;
 	s->token_text[0] = '\0';
 	s->token_truncated = false;
 	s->is_identifier_start = is_identifier_start_default;
@@ -60,8 +58,9 @@ static size_t u8t_scanner_remaining(u8t_scanner* s) {
 	if (!s) {
 		return 0u;
 	}
-	const int remaining = U8T_SCANNER_MAX_TOKEN_LEN - 1u - s->token_len;
-	return remaining > 0 ? (size_t)remaining : 0u;
+	const size_t cap = (U8T_SCANNER_MAX_TOKEN_LEN > 0u) ? (U8T_SCANNER_MAX_TOKEN_LEN - 1u) : 0u;
+	const size_t used = utf8len(s->token_text);
+	return (used < cap) ? (cap - used) : 0u;
 }
 
 char32_t u8t_scanner_scan(u8t_scanner* s) {
@@ -70,7 +69,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 	}
 	memset(s->token_text, 0, sizeof(s->token_text));
 	s->token_start += s->token_len;
-	s->token_len = 0;
+	s->token_len = 0u;
 	s->token_truncated = false;
 
 	utf8_int32_t cp = 0;
@@ -79,17 +78,10 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		return U8T_EOF;
 	}
 
-	if (cp == U' ' || cp == U'\t' || cp == U'\r') {
+	if (cp == U' ' || cp == U'\t' || cp == U'\r' || cp == U'\n') {
 		s->str = next;
 		s->token_text[0] = cp;
-		s->token_len = 1;
-		return u8t_scanner_scan(s);
-	}
-
-	if (cp == U'\n') {
-		s->str = next;
-		s->token_text[0] = '\n';
-		s->token_len = 1;
+		s->token_len = 1u;
 		return u8t_scanner_scan(s);
 	}
 
@@ -176,7 +168,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		type = cp;
 		s->token_text[0] = (char)cp;
 		s->token_text[1] = '\0';
-		s->token_len = 1;
+		s->token_len = 1u;
 	}
 
 	s->str = next;

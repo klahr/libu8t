@@ -26,7 +26,7 @@ enum {
 struct u8t_scanner;
 typedef struct u8t_scanner u8t_scanner;
 
-u8t_scanner* u8t_scanner_new(const char* str, size_t len);
+u8t_scanner* u8t_scanner_new(const char* str);
 void u8t_scanner_free(u8t_scanner* s);
 char32_t u8t_scanner_scan(u8t_scanner* s);
 char32_t u8t_scanner_peek(u8t_scanner* s);

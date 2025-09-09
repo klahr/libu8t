@@ -27,12 +27,11 @@ $ sudo make uninstall
 // example.c
 
 #include <u8t/scanner.h>
-#include <string.h>
 
 int main(void) {
 	const char* src = "var x = 42;";
 
-	u8t_scanner* s = u8t_scanner_new(src, strlen(src));
+	u8t_scanner* s = u8t_scanner_new(src);
 
 	char32_t token;
 	while ((token = u8t_scanner_scan(s)) != U8T_EOF) {

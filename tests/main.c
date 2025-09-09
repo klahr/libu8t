@@ -3,7 +3,7 @@
 
 TEST(Something) {
 	const char* str = "Hello,\n \"世🙂界!\" 123 45.67 _varName \"string\"";
-	u8t_scanner* s = u8t_scanner_new(str, strlen(str));
+	u8t_scanner* s = u8t_scanner_new(str);
 
 	char32_t t;
 	size_t n;
@@ -55,7 +55,7 @@ TEST(Something) {
 
 TEST(Scanner) {
 	const char* str = "fn main() {\n\tpush -8\n\tpush \"Hello, world!\"\n}";
-	u8t_scanner* s = u8t_scanner_new(str, strlen(str));
+	u8t_scanner* s = u8t_scanner_new(str);
 
 	char32_t t;
 	size_t n;
