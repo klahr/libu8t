@@ -32,7 +32,7 @@ install: $(TARGET)
 	@mkdir -p $(INSTALL_DIR)
 	install -m 0755 $(TARGET) $(INSTALL_DIR)
 	@mkdir -p $(HEADER_INSTALL_DIR)/u8t
-	@cp -p include/ciphers/*.h $(HEADER_INSTALL_DIR)/u8t
+	@cp -p include/u8t/*.h $(HEADER_INSTALL_DIR)/u8t
 
 uninstall:
 	@rm -f $(INSTALL_DIR)/libu8t.so
