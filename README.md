@@ -31,23 +31,24 @@ $ sudo make uninstall
 int main(void) {
 	const char* src = "var x = 42;";
 
-	u8t_scanner* s = u8t_scanner_new(src);
+	u8t_scanner s;
+	u8t_scanner_init(&s, src);
 
 	char32_t token;
-	while ((token = u8t_scanner_scan(s)) != U8T_EOF) {
+	while ((token = u8t_scanner_scan(&s)) != U8T_EOF) {
 		size_t n;
 		switch (token) {
 			case U8T_IDENTIFIER:
-				printf("Identifier: %s\n", u8t_scanner_token_text(s, &n));
+				printf("Identifier: %s\n", u8t_scanner_token_text(&s, &n));
 				break;
 			case U8T_INTEGER:
-				printf("Integer   : %s\n", u8t_scanner_token_text(s, &n));
+				printf("Integer   : %s\n", u8t_scanner_token_text(&s, &n));
 				break;
 			case U8T_STRING:
-				printf("String    : %s\n", u8t_scanner_token_text(s, &n));
+				printf("String    : %s\n", u8t_scanner_token_text(&s, &n));
 				break;
 			case U8T_FLOAT:
-				printf("Float     : %s\n", u8t_scanner_token_text(s, &n));
+				printf("Float     : %s\n", u8t_scanner_token_text(&s, &n));
 				break;
 			default:
 				printf("Token     : %c\n", token);
@@ -55,7 +56,6 @@ int main(void) {
 		}
 	}
 
-	u8t_scanner_free(s);
 	return 0;
 }
 ```
