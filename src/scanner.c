@@ -21,7 +21,7 @@ bool u8t_scanner_init(u8t_scanner* s, const char* str) {
 	}
 
 	if (utf8valid((const utf8_int8_t*)str) != 0) {
-		return NULL;
+		return false;
 	}
 
 	s->_str = str;
