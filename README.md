@@ -4,6 +4,7 @@
 - [Description](#description)
 - [Install](#install)
 - [Usage](#usage)
+- [Documentation](#documentation)
 - [Maintainers](#maintainers)
 - [Contributing](#contributing)
 
@@ -69,6 +70,12 @@ Identifier: x
 Token     : =
 Integer   : 42
 Token     : ;
+```
+
+## Documentation
+The API documentation can be generated using Doxygen. Files are located in the `docs/` directory.
+```back
+$ doxygen Doxyfile
 ```
 
 ## Maintainers
