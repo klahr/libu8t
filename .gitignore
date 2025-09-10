@@ -6,3 +6,4 @@ example/example
 compile_commands.json
 tests/src
 tests/tests
+docs
