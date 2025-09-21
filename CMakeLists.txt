@@ -12,6 +12,7 @@ include(GNUInstallDirs)
 
 add_compile_options(-std=c23 -Wall -Wextra -pedantic)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_INSTALL_PREFIX /usr CACHE PATH "Install path prefix." FORCE)
 
 add_library(${PROJECT_NAME} SHARED
