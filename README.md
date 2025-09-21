@@ -15,8 +15,9 @@ Tokenizer C library with UTF-8 support.
 ```bash
 $ git clone https://git.sr.ht/~klahr/libu8t
 $ cd libu8t
-$ make
-$ sudo make install
+$ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+$ cmake --build build
+$ sudo cmake --install build
 ```
 #### Uninstall
 ```bash
