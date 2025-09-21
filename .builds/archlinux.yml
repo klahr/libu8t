@@ -16,7 +16,8 @@ tasks:
       sudo make install
   - build: |
       cd libu8t
-      make
+      cmake -S . -B build
+      cmake --build build
   - run_tests: |
       cd libu8t/tests
       make
