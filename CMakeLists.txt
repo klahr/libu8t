@@ -10,7 +10,7 @@ project (u8t
 
 include(GNUInstallDirs)
 
-add_compile_options(-Wall -Wextra -pedantic)
+add_compile_options(-std=c23 -Wall -Wextra -pedantic)
 
 set(CMAKE_INSTALL_PREFIX /usr CACHE PATH "Install path prefix." FORCE)
 

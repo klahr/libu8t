@@ -1,55 +1,18 @@
-CC = gcc
-CFLAGS = -std=c23 -fPIC -I./include -Wall -Wextra -pedantic -finput-charset=UTF-8
-LDFLAGS = -shared
+.PHONY: compile_commands clean
 
-OPTFLAGS ?= -O2 -DNDEBUG
-CFLAGS += $(OPTFLAGS)
+CC      = cc
+CFLAGS  = -Iinclude -Wall -g
+SRC     := $(wildcard src/*.c)
+OBJDIR  := obj
+OBJS    := $(patsubst src/%.c,$(OBJDIR)/%.o,$(SRC))
 
-SRC_DIR = ./src
-OBJ_DIR = ./obj
-BUILD_DIR = ./lib
-EXAMPLE_DIR = ./example
-INSTALL_DIR ?= /usr/lib
-HEADER_INSTALL_DIR ?= /usr/include
+compile_commands: $(OBJS)
 
-TARGET = $(BUILD_DIR)/libu8t.so
-EXAMPLE = $(EXAMPLE_DIR)/example
+$(OBJDIR)/%.o: src/%.c | $(OBJDIR)
+	bear --append -- $(CC) $(CFLAGS) -c $< -o $@
 
-SRCS = $(wildcard $(SRC_DIR)/*.c)
-OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
-
-all: $(TARGET)
-
-$(TARGET): $(OBJS)
-	@mkdir -p $(BUILD_DIR)
-	$(CC) $(LDFLAGS) -o $@ $^
-
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	@mkdir -p $(OBJ_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-install: $(TARGET)
-	@mkdir -p $(INSTALL_DIR)
-	install -m 0755 $(TARGET) $(INSTALL_DIR)
-	@mkdir -p $(HEADER_INSTALL_DIR)/u8t
-	@cp -p include/u8t/*.h $(HEADER_INSTALL_DIR)/u8t
-
-uninstall:
-	@rm -f $(INSTALL_DIR)/libu8t.so
-	@rm -rf $(HEADER_INSTALL_DIR)/u8t
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
 
 clean:
-	rm -rf $(OBJ_DIR) $(BUILD_DIR) $(EXAMPLE) compile_commands.json
-
-debug: OPTFLAGS = -O0 -g -DDEBUG -fno-omit-frame-pointer
-debug: all
-
-example: $(EXAMPLE)
-
-$(EXAMPLE): $(EXAMPLE_DIR)/main.c $(TARGET)
-	$(CC) -O0 -g -I./include -L$(BUILD_DIR) -lu8t -o $@ $<
-
-compile_commands:
-	bear -- make clean all
-
-.PHONY: all clean install uninstall debug example compile_commands
+	rm -rf $(OBJDIR) compile_commands.json
