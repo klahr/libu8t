@@ -20,7 +20,7 @@ tasks:
       cmake --build build
   - run_tests: |
       cd libu8t/build
-      ctest --output-on-failure
+      ctest -j$(nproc) --output-on-failure
   - run_valgrind: |
       cd libu8t/build
       export DEBUGINFOD_URLS="https://debuginfod.archlinux.org"

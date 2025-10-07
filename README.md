@@ -24,12 +24,22 @@ $ sudo cmake --install build
 Run the test suite with CTest:
 ```bash
 $ cd build
-$ ctest --output-on-failure
+$ ctest
 ```
 
-Or with verbose output:
+Run tests in parallel (faster):
+```bash
+$ ctest -j$(nproc)
+```
+
+Run with verbose output:
 ```bash
 $ ctest --verbose
+```
+
+Run specific tests:
+```bash
+$ ctest -R test_numbers
 ```
 
 ## Usage
