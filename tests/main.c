@@ -120,6 +120,310 @@ TEST(Scanner) {
 	ASSERT_EQ(U8T_EOF, t, "Expected EOF");
 }
 
+// Edge case tests
+TEST(EmptyString) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "Empty string should return EOF");
+}
+
+TEST(WhitespaceOnly) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "   \t\n\r  ");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "Whitespace only should return EOF");
+}
+
+TEST(UnclosedString) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"unclosed string");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Should recognize unclosed string");
+
+	size_t n;
+	const char* text = u8t_scanner_token_text(&s, &n);
+	ASSERT(text != NULL, "Token text should not be NULL");
+}
+
+TEST(EmptyString_Literal) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"\"");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Should recognize empty string literal");
+
+	size_t n;
+	ASSERT_STR_EQ("\"\"", u8t_scanner_token_text(&s, &n), "Should be empty string");
+}
+
+TEST(ConsecutiveStrings) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"hello\"\"world\"");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "First string");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Second string");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "EOF");
+}
+
+TEST(NegativeNumbers) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "-42 -3.14 -0");
+
+	char32_t t;
+	size_t n;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Negative integer");
+	ASSERT_STR_EQ("-42", u8t_scanner_token_text(&s, &n), "Should be -42");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_FLOAT, t, "Negative float");
+	ASSERT_STR_EQ("-3.14", u8t_scanner_token_text(&s, &n), "Should be -3.14");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Negative zero");
+	ASSERT_STR_EQ("-0", u8t_scanner_token_text(&s, &n), "Should be -0");
+}
+
+TEST(ScientificNotation) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "1e5 2.5E3 3.14e10");
+
+	size_t n;
+
+	u8t_scanner_scan(&s);
+	ASSERT_STR_EQ("1e5", u8t_scanner_token_text(&s, &n), "Scientific notation 1e5");
+
+	u8t_scanner_scan(&s);
+	ASSERT_STR_EQ("2.5E3", u8t_scanner_token_text(&s, &n), "Scientific notation 2.5E3");
+
+	u8t_scanner_scan(&s);
+	ASSERT_STR_EQ("3.14e10", u8t_scanner_token_text(&s, &n), "Scientific notation 3.14e10");
+}
+
+TEST(LeadingZeros) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "007 0.5 00.00");
+
+	char32_t t;
+	size_t n;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Integer with leading zeros");
+	ASSERT_STR_EQ("007", u8t_scanner_token_text(&s, &n), "Should be 007");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_FLOAT, t, "Float starting with 0");
+	ASSERT_STR_EQ("0.5", u8t_scanner_token_text(&s, &n), "Should be 0.5");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_FLOAT, t, "Float with leading zeros");
+	ASSERT_STR_EQ("00.00", u8t_scanner_token_text(&s, &n), "Should be 00.00");
+}
+
+TEST(SpecialCharacters) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "(){}[];,.:!@#$%^&*+-=<>?/\\|");
+
+	char32_t t;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'(', t, "Open paren");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U')', t, "Close paren");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'{', t, "Open brace");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'}', t, "Close brace");
+
+	// Continue scanning remaining special characters
+	while ((t = u8t_scanner_scan(&s)) != U8T_EOF) {
+		ASSERT(t != U8T_IDENTIFIER && t != U8T_INTEGER && t != U8T_FLOAT && t != U8T_STRING,
+		       "Should be special character token");
+	}
+}
+
+TEST(MultipleDecimalPoints) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "3.14.159");
+
+	char32_t t;
+	size_t n;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_FLOAT, t, "First part should be float");
+	ASSERT_STR_EQ("3.14", u8t_scanner_token_text(&s, &n), "Should stop at second decimal");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'.', t, "Second decimal should be separate token");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Remaining should be integer");
+	ASSERT_STR_EQ("159", u8t_scanner_token_text(&s, &n), "Should be 159");
+}
+
+TEST(MinusWithoutDigit) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "- 5");
+
+	char32_t t;
+	size_t n;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'-', t, "Minus should be separate token");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Number should follow");
+	ASSERT_STR_EQ("5", u8t_scanner_token_text(&s, &n), "Should be 5");
+}
+
+TEST(UnderscoreVariations) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "_ _a a_ _123 __double__");
+
+	char32_t t;
+	size_t n;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "Single underscore");
+	ASSERT_STR_EQ("_", u8t_scanner_token_text(&s, &n), "Should be _");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "Underscore prefix");
+	ASSERT_STR_EQ("_a", u8t_scanner_token_text(&s, &n), "Should be _a");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "Underscore suffix");
+	ASSERT_STR_EQ("a_", u8t_scanner_token_text(&s, &n), "Should be a_");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "Underscore with digits");
+	ASSERT_STR_EQ("_123", u8t_scanner_token_text(&s, &n), "Should be _123");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "Double underscore");
+	ASSERT_STR_EQ("__double__", u8t_scanner_token_text(&s, &n), "Should be __double__");
+}
+
+TEST(MixedCase) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "CamelCase SCREAMING_SNAKE snake_case");
+
+	char32_t t;
+	size_t n;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "CamelCase");
+	ASSERT_STR_EQ("CamelCase", u8t_scanner_token_text(&s, &n), "Should be CamelCase");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "SCREAMING_SNAKE");
+	ASSERT_STR_EQ("SCREAMING_SNAKE", u8t_scanner_token_text(&s, &n), "Should be SCREAMING_SNAKE");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "snake_case");
+	ASSERT_STR_EQ("snake_case", u8t_scanner_token_text(&s, &n), "Should be snake_case");
+}
+
+TEST(UTF8_Identifiers) {
+	u8t_scanner s;
+	// Note: Default is_identifier_start only accepts ASCII, but test UTF-8 strings
+	u8t_scanner_init(&s, "hello 世界 42");
+
+	char32_t t;
+	size_t n;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "ASCII identifier");
+	ASSERT_STR_EQ("hello", u8t_scanner_token_text(&s, &n), "Should be hello");
+
+	t = u8t_scanner_scan(&s);
+	// UTF-8 characters that aren't ASCII letters will be treated as separate tokens
+	// This is expected behavior with default is_identifier_start
+
+	// Skip to number
+	while ((t = u8t_scanner_scan(&s)) != U8T_EOF && t != U8T_INTEGER) {
+		// continue
+	}
+	ASSERT_EQ(U8T_INTEGER, t, "Should find integer");
+	ASSERT_STR_EQ("42", u8t_scanner_token_text(&s, &n), "Should be 42");
+}
+
+TEST(NullPointerHandling) {
+	// Test that NULL pointers don't crash
+	bool result = u8t_scanner_init(NULL, "test");
+	ASSERT_EQ(false, result, "NULL scanner should return false");
+
+	u8t_scanner s;
+	result = u8t_scanner_init(&s, NULL);
+	ASSERT_EQ(false, result, "NULL string should return false");
+
+	char32_t t = u8t_scanner_scan(NULL);
+	ASSERT_EQ(U8T_EOF, t, "NULL scanner should return EOF");
+
+	size_t n;
+	const char* text = u8t_scanner_token_text(NULL, &n);
+	ASSERT_EQ(NULL, text, "NULL scanner should return NULL text");
+}
+
+TEST(SingleCharacterTokens) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "a b c 1 2 3");
+
+	char32_t t;
+	size_t n;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "Single char identifier");
+	ASSERT_STR_EQ("a", u8t_scanner_token_text(&s, &n), "Should be a");
+	ASSERT_EQ(1, n, "Length should be 1");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "Single char identifier");
+	ASSERT_STR_EQ("b", u8t_scanner_token_text(&s, &n), "Should be b");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "Single char identifier");
+	ASSERT_STR_EQ("c", u8t_scanner_token_text(&s, &n), "Should be c");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Single digit");
+	ASSERT_STR_EQ("1", u8t_scanner_token_text(&s, &n), "Should be 1");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Single digit");
+	ASSERT_STR_EQ("2", u8t_scanner_token_text(&s, &n), "Should be 2");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Single digit");
+	ASSERT_STR_EQ("3", u8t_scanner_token_text(&s, &n), "Should be 3");
+}
+
+TEST(TokenPositions) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "abc 123");
+
+	u8t_scanner_scan(&s);
+	ASSERT_EQ(0, u8t_scanner_token_start(&s), "First token starts at 0");
+	ASSERT_EQ(3, u8t_scanner_token_len(&s), "First token length is 3");
+
+	u8t_scanner_scan(&s);
+	ASSERT_EQ(4, u8t_scanner_token_start(&s), "Second token starts at 4");
+	ASSERT_EQ(3, u8t_scanner_token_len(&s), "Second token length is 3");
+}
+
 int main(void) {
 	return UC_PrintResults();
 }
