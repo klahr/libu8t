@@ -14,14 +14,10 @@ Tokenizer C library with UTF-8 support.
 ## Install
 ```bash
 $ git clone https://git.sr.ht/~klahr/libu8t
-$ cd libu8t
+$ cd libu8t/
 $ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 $ cmake --build build
 $ sudo cmake --install build
-```
-#### Uninstall
-```bash
-$ sudo make uninstall
 ```
 
 ## Usage

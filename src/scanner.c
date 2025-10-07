@@ -146,8 +146,9 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		}
 	} else {
 		type = cp;
-		s->_token_text[0] = (char)cp;
-		s->_token_text[1] = '\0';
+		if (!utf8catcodepoint(s->_token_text, cp, u8t_scanner_remaining(s))) {
+			s->_token_truncated = true;
+		}
 		s->_token_len = 1u;
 	}
 

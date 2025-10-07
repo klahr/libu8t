@@ -61,8 +61,9 @@ char32_t u8t_scanner_scan(u8t_scanner* s);
 
 /*! \fn char32_t u8t_scanner_peek(u8t_scanner* s)
 	\param s Pointer to the scanner structure.
-	\return The next character in the string without advancing the scanner.
-	\note Returns 0 if the end of the string is reached.
+	\return The next character that will be scanned without advancing the scanner position.
+	\note Returns 0 if the end of the string is reached or if there is no next character.
+	\note This peeks at the character after the current scanning position.
 */
 char32_t u8t_scanner_peek(u8t_scanner* s);
 
