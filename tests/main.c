@@ -453,6 +453,236 @@ TEST(TokenPositions) {
 	ASSERT_EQ(3, u8t_scanner_token_len(&s), "Second token length is 3");
 }
 
+TEST(PeekFunction) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "abc");
+
+	char32_t peek = u8t_scanner_peek(&s);
+	ASSERT_EQ(U'b', peek, "Peek should return 'b' (next after 'a')");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "Should scan identifier");
+
+	u8t_scanner_init(&s, "a");
+	u8t_scanner_scan(&s);
+	peek = u8t_scanner_peek(&s);
+	ASSERT_EQ(0, peek, "Peek at EOF should return 0");
+
+	peek = u8t_scanner_peek(NULL);
+	ASSERT_EQ(0, peek, "Peek on NULL should return 0");
+}
+
+TEST(TokenTruncation) {
+	u8t_scanner s;
+
+	char long_str[3000];
+	for (int i = 0; i < 2999; i++) {
+		long_str[i] = 'a';
+	}
+	long_str[2999] = '\0';
+
+	u8t_scanner_init(&s, long_str);
+	u8t_scanner_scan(&s);
+
+	ASSERT_EQ(true, u8t_scanner_token_truncated(&s), "Long token should be truncated");
+
+	size_t n;
+	u8t_scanner_token_text(&s, &n);
+	ASSERT(n < 2999, "Token length should be less than input");
+
+	u8t_scanner_init(&s, "short");
+	u8t_scanner_scan(&s);
+	ASSERT_EQ(false, u8t_scanner_token_truncated(&s), "Short token should not be truncated");
+}
+
+TEST(LongStrings) {
+	u8t_scanner s;
+
+	char long_str[3000];
+	long_str[0] = '"';
+	for (int i = 1; i < 2998; i++) {
+		long_str[i] = 'x';
+	}
+	long_str[2998] = '"';
+	long_str[2999] = '\0';
+
+	u8t_scanner_init(&s, long_str);
+	char32_t t = u8t_scanner_scan(&s);
+
+	ASSERT_EQ(U8T_STRING, t, "Should recognize as string");
+	ASSERT_EQ(true, u8t_scanner_token_truncated(&s), "Long string should be truncated");
+}
+
+TEST(CustomIdentifierStart) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "$var @param");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'$', t, "$ should be special char with default");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "var should be identifier");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'@', t, "@ should be special char with default");
+}
+
+TEST(RepeatedScanning) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "a b c");
+
+	u8t_scanner_scan(&s);
+	u8t_scanner_scan(&s);
+	u8t_scanner_scan(&s);
+
+	for (int i = 0; i < 5; i++) {
+		char32_t t = u8t_scanner_scan(&s);
+		ASSERT_EQ(U8T_EOF, t, "Repeated scans after EOF should return EOF");
+	}
+}
+
+TEST(MixedWhitespace) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "a\t\t\tb\n\n\nc\r\n\r\nd");
+
+	size_t n;
+
+	u8t_scanner_scan(&s);
+	ASSERT_STR_EQ("a", u8t_scanner_token_text(&s, &n), "First identifier");
+
+	u8t_scanner_scan(&s);
+	ASSERT_STR_EQ("b", u8t_scanner_token_text(&s, &n), "Second identifier");
+
+	u8t_scanner_scan(&s);
+	ASSERT_STR_EQ("c", u8t_scanner_token_text(&s, &n), "Third identifier");
+
+	u8t_scanner_scan(&s);
+	ASSERT_STR_EQ("d", u8t_scanner_token_text(&s, &n), "Fourth identifier");
+}
+
+TEST(NumbersStartingWithDecimal) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, ".5 .123");
+
+	char32_t t;
+	size_t n;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'.', t, "Decimal point alone is special char");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "5 is integer");
+	ASSERT_STR_EQ("5", u8t_scanner_token_text(&s, &n), "Should be 5");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'.', t, "Second decimal point");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "123 is integer");
+}
+
+TEST(StringsWithNewlines) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"hello\nworld\"");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Multi-line string");
+
+	size_t n;
+	const char* text = u8t_scanner_token_text(&s, &n);
+	ASSERT(text != NULL, "Token text should not be NULL");
+}
+
+TEST(AdjacentOperators) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "++--==!=<=>===");
+
+	char32_t t;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'+', t, "First plus");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'+', t, "Second plus");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'-', t, "First minus");
+
+	while ((t = u8t_scanner_scan(&s)) != U8T_EOF) {
+		ASSERT(t != U8T_IDENTIFIER && t != U8T_INTEGER && t != U8T_FLOAT && t != U8T_STRING,
+		       "Should be operator tokens");
+	}
+}
+
+TEST(IdentifiersWithNumbers) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "var1 test_2 foo3bar hello123world");
+
+	char32_t t;
+	size_t n;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "var1");
+	ASSERT_STR_EQ("var1", u8t_scanner_token_text(&s, &n), "Should be var1");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "test_2");
+	ASSERT_STR_EQ("test_2", u8t_scanner_token_text(&s, &n), "Should be test_2");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "foo3bar");
+	ASSERT_STR_EQ("foo3bar", u8t_scanner_token_text(&s, &n), "Should be foo3bar");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "hello123world");
+	ASSERT_STR_EQ("hello123world", u8t_scanner_token_text(&s, &n), "Should be hello123world");
+}
+
+TEST(FloatsWithMultipleDecimalsInSequence) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "1.2.3.4.5");
+
+	char32_t t;
+	size_t n;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_FLOAT, t, "First float");
+	ASSERT_STR_EQ("1.2", u8t_scanner_token_text(&s, &n), "Should be 1.2");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'.', t, "Decimal");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_FLOAT, t, "Second float");
+	ASSERT_STR_EQ("3.4", u8t_scanner_token_text(&s, &n), "Should be 3.4");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U'.', t, "Decimal");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Integer");
+	ASSERT_STR_EQ("5", u8t_scanner_token_text(&s, &n), "Should be 5");
+}
+
+TEST(TokenTextWithNullLength) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "hello");
+
+	u8t_scanner_scan(&s);
+
+	const char* text = u8t_scanner_token_text(&s, NULL);
+	ASSERT(text != NULL, "Should return text even with NULL length param");
+}
+
+TEST(AllAPIFunctionsWithNull) {
+	ASSERT_EQ(U8T_EOF, u8t_scanner_scan(NULL), "scan(NULL) returns EOF");
+	ASSERT_EQ(0, u8t_scanner_peek(NULL), "peek(NULL) returns 0");
+	ASSERT_EQ(NULL, u8t_scanner_token_text(NULL, NULL), "token_text(NULL) returns NULL");
+	ASSERT_EQ(0, u8t_scanner_token_start(NULL), "token_start(NULL) returns 0");
+	ASSERT_EQ(0, u8t_scanner_token_len(NULL), "token_len(NULL) returns 0");
+	ASSERT_EQ(false, u8t_scanner_token_truncated(NULL), "token_truncated(NULL) returns false");
+}
+
 int main(void) {
 	return UC_PrintResults();
 }
