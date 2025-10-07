@@ -120,7 +120,6 @@ TEST(Scanner) {
 	ASSERT_EQ(U8T_EOF, t, "Expected EOF");
 }
 
-// Edge case tests
 TEST(EmptyString) {
 	u8t_scanner s;
 	u8t_scanner_init(&s, "");
@@ -196,7 +195,7 @@ TEST(NegativeNumbers) {
 
 TEST(ScientificNotation) {
 	u8t_scanner s;
-	u8t_scanner_init(&s, "1e5 2.5E3 3.14e10");
+	u8t_scanner_init(&s, "1e5 2.5E-3 3.14e+10 6.022E+23");
 
 	size_t n;
 
@@ -204,10 +203,46 @@ TEST(ScientificNotation) {
 	ASSERT_STR_EQ("1e5", u8t_scanner_token_text(&s, &n), "Scientific notation 1e5");
 
 	u8t_scanner_scan(&s);
-	ASSERT_STR_EQ("2.5E3", u8t_scanner_token_text(&s, &n), "Scientific notation 2.5E3");
+	ASSERT_STR_EQ("2.5E-3", u8t_scanner_token_text(&s, &n), "Scientific notation 2.5E-3");
 
 	u8t_scanner_scan(&s);
-	ASSERT_STR_EQ("3.14e10", u8t_scanner_token_text(&s, &n), "Scientific notation 3.14e10");
+	ASSERT_STR_EQ("3.14e+10", u8t_scanner_token_text(&s, &n), "Scientific notation 3.14e+10");
+
+	u8t_scanner_scan(&s);
+	ASSERT_STR_EQ("6.022E+23", u8t_scanner_token_text(&s, &n), "Scientific notation 6.022E+23 (Avogadro's number)");
+}
+
+TEST(ScientificNotation_EdgeCases) {
+	u8t_scanner s;
+	size_t n;
+	char32_t t;
+
+	u8t_scanner_init(&s, "1e");
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "1e without digits treated as integer");
+
+	u8t_scanner_init(&s, "1e+");
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "1e+ without digits treated as integer");
+
+	u8t_scanner_init(&s, "1E-0");
+	t = u8t_scanner_scan(&s);
+	ASSERT_STR_EQ("1E-0", u8t_scanner_token_text(&s, &n), "Zero exponent");
+
+	u8t_scanner_init(&s, "-1.5e-10");
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_FLOAT, t, "Negative with negative exponent");
+	ASSERT_STR_EQ("-1.5e-10", u8t_scanner_token_text(&s, &n), "Should be -1.5e-10");
+
+	u8t_scanner_init(&s, "1e5e3");
+	t = u8t_scanner_scan(&s);
+	ASSERT_STR_EQ("1e5", u8t_scanner_token_text(&s, &n), "Only first exponent");
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_IDENTIFIER, t, "e3 becomes identifier");
+
+	u8t_scanner_init(&s, "1e308");
+	t = u8t_scanner_scan(&s);
+	ASSERT_STR_EQ("1e308", u8t_scanner_token_text(&s, &n), "Large exponent");
 }
 
 TEST(LeadingZeros) {
@@ -248,7 +283,6 @@ TEST(SpecialCharacters) {
 	t = u8t_scanner_scan(&s);
 	ASSERT_EQ(U'}', t, "Close brace");
 
-	// Continue scanning remaining special characters
 	while ((t = u8t_scanner_scan(&s)) != U8T_EOF) {
 		ASSERT(t != U8T_IDENTIFIER && t != U8T_INTEGER && t != U8T_FLOAT && t != U8T_STRING,
 		       "Should be special character token");
@@ -339,7 +373,6 @@ TEST(MixedCase) {
 
 TEST(UTF8_Identifiers) {
 	u8t_scanner s;
-	// Note: Default is_identifier_start only accepts ASCII, but test UTF-8 strings
 	u8t_scanner_init(&s, "hello 世界 42");
 
 	char32_t t;
@@ -350,19 +383,15 @@ TEST(UTF8_Identifiers) {
 	ASSERT_STR_EQ("hello", u8t_scanner_token_text(&s, &n), "Should be hello");
 
 	t = u8t_scanner_scan(&s);
-	// UTF-8 characters that aren't ASCII letters will be treated as separate tokens
-	// This is expected behavior with default is_identifier_start
 
-	// Skip to number
 	while ((t = u8t_scanner_scan(&s)) != U8T_EOF && t != U8T_INTEGER) {
-		// continue
+		continue;
 	}
 	ASSERT_EQ(U8T_INTEGER, t, "Should find integer");
 	ASSERT_STR_EQ("42", u8t_scanner_token_text(&s, &n), "Should be 42");
 }
 
 TEST(NullPointerHandling) {
-	// Test that NULL pointers don't crash
 	bool result = u8t_scanner_init(NULL, "test");
 	ASSERT_EQ(false, result, "NULL scanner should return false");
 

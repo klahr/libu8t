@@ -113,6 +113,23 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 					}
 					++s->_token_len;
 					has_exponent = true;
+					// Advance to check for optional sign after exponent
+					s->_str = next;
+					next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
+					peek_cp = u8t_scanner_peek(s);
+					// Check for optional +/- after exponent marker
+					if (peek_cp == U'+' || peek_cp == U'-') {
+						if (!utf8catcodepoint(s->_token_text + s->_token_len, peek_cp, u8t_scanner_remaining(s))) {
+							s->_token_truncated = true;
+						}
+						++s->_token_len;
+						s->_str = next;
+						next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
+					}
+					continue;
+				} else if (peek_cp == U'+' || peek_cp == U'-') {
+					// Only allow +/- after exponent, not in middle of number
+					break;
 				} else {
 					break;
 				}
