@@ -75,7 +75,7 @@ Token     : ;
 
 ## Documentation
 The API documentation can be generated using Doxygen. Files are located in the `docs/` directory.
-```back
+```bash
 $ doxygen Doxyfile
 ```
 
