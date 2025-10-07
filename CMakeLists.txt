@@ -44,3 +44,6 @@ install(DIRECTORY include/
 )
 
 add_custom_target(uninstall COMMAND rm -rf ${CMAKE_INSTALL_PREFIX}/include/u8t; rm -rf ${CMAKE_INSTALL_PREFIX}/lib/libu8t*)
+
+enable_testing()
+add_subdirectory(tests)

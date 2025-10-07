@@ -20,6 +20,18 @@ $ cmake --build build
 $ sudo cmake --install build
 ```
 
+### Testing
+Run the test suite with CTest:
+```bash
+$ cd build
+$ ctest --output-on-failure
+```
+
+Or with verbose output:
+```bash
+$ ctest --verbose
+```
+
 ## Usage
 ```c
 // example.c
