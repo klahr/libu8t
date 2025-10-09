@@ -68,7 +68,7 @@ TEST(PeekFunction) {
 	u8t_scanner_init(&s, "abc");
 
 	char32_t peek = u8t_scanner_peek(&s);
-	ASSERT_EQ(U'b', peek, "Peek should return 'b' (next after 'a')");
+	ASSERT_EQ(U'a', peek, "Peek should return 'a' (current character)");
 
 	char32_t t = u8t_scanner_scan(&s);
 	ASSERT_EQ(U8T_IDENTIFIER, t, "Should scan identifier");

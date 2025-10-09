@@ -67,31 +67,33 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 
 	char32_t type;
 	if (cp == U'"') {
-		if (!utf8catcodepoint(s->_token_text + s->_token_len, cp, u8t_scanner_remaining(s))) {
+		if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), cp, u8t_scanner_remaining(s))) {
 			s->_token_truncated = true;
 		}
 		++s->_token_len;
+		s->_str = next;
 		bool done = false;
 		while (!done) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (peek_cp == U'"' || peek_cp == 0) {
 				done = true;
 			}
-			if (!utf8catcodepoint(s->_token_text + s->_token_len, peek_cp, u8t_scanner_remaining(s))) {
+			if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
 				s->_token_truncated = true;
 			}
 			++s->_token_len;
+			next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
 			s->_str = next;
-			next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 		}
 		type = U8T_STRING;
-	} else if (is_digit(cp) || (cp == U'-' && is_digit(u8t_scanner_peek(s)))) {
-		if (!utf8catcodepoint(s->_token_text + s->_token_len, cp, u8t_scanner_remaining(s))) {
+	} else if (is_digit(cp)) {
+		if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), cp, u8t_scanner_remaining(s))) {
 			s->_token_truncated = true;
 		}
 		++s->_token_len;
 		bool has_exponent = false;
 		type = U8T_INTEGER;
+		s->_str = next;
 		for (;;) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (!is_digit(peek_cp)) {
@@ -100,31 +102,33 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 						break;
 					}
 					type = U8T_FLOAT;
-					if (!utf8catcodepoint(s->_token_text + s->_token_len, peek_cp, u8t_scanner_remaining(s))) {
+					if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
 						s->_token_truncated = true;
 					}
 					++s->_token_len;
+					next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+					s->_str = next;
 				} else if (peek_cp == U'e' || peek_cp == U'E') {
 					if (has_exponent) {
 						break;
 					}
-					if (!utf8catcodepoint(s->_token_text + s->_token_len, peek_cp, u8t_scanner_remaining(s))) {
+					if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
 						s->_token_truncated = true;
 					}
 					++s->_token_len;
 					has_exponent = true;
 					// Advance to check for optional sign after exponent
+					next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
 					s->_str = next;
-					next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 					peek_cp = u8t_scanner_peek(s);
 					// Check for optional +/- after exponent marker
 					if (peek_cp == U'+' || peek_cp == U'-') {
-						if (!utf8catcodepoint(s->_token_text + s->_token_len, peek_cp, u8t_scanner_remaining(s))) {
+						if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
 							s->_token_truncated = true;
 						}
 						++s->_token_len;
+						next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
 						s->_str = next;
-						next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 					}
 					continue;
 				} else if (peek_cp == U'+' || peek_cp == U'-') {
@@ -134,32 +138,103 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 					break;
 				}
 			} else {
-				if (!utf8catcodepoint(s->_token_text + s->_token_len, peek_cp, u8t_scanner_remaining(s))) {
+				if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
 					s->_token_truncated = true;
 				}
 				++s->_token_len;
+				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+				s->_str = next;
 			}
-			s->_str = next;
-			next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 		}
 	} else if (s->is_identifier_start(cp)) {
-		if (!utf8catcodepoint(s->_token_text + s->_token_len, cp, u8t_scanner_remaining(s))) {
+		if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), cp, u8t_scanner_remaining(s))) {
 			s->_token_truncated = true;
 		}
 		++s->_token_len;
 		type = U8T_IDENTIFIER;
+		s->_str = next;
 		for (;;) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (s->is_identifier_start(peek_cp) || is_digit(peek_cp)) {
-				if (!utf8catcodepoint(s->_token_text + s->_token_len, peek_cp, u8t_scanner_remaining(s))) {
+				if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
 					s->_token_truncated = true;
 				}
+				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
 				s->_str = next;
-				next = (const char*)utf8codepoint((const utf8_int8_t*)next, &cp);
 				++s->_token_len;
 			} else {
 				break;
 			}
+		}
+	} else if (cp == U'-') {
+		// Check if minus is followed by a digit for negative numbers
+		utf8_int32_t next_cp;
+		utf8codepoint((const utf8_int8_t*)next, &next_cp);
+		if (is_digit(next_cp)) {
+			// Negative number - duplicate the number scanning logic
+			if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), cp, u8t_scanner_remaining(s))) {
+				s->_token_truncated = true;
+			}
+			++s->_token_len;
+			bool has_exponent = false;
+			type = U8T_INTEGER;
+			s->_str = next;
+			for (;;) {
+				char32_t peek_cp = u8t_scanner_peek(s);
+				if (!is_digit(peek_cp)) {
+					if (peek_cp == U'.') {
+						if (type == U8T_FLOAT) {
+							break;
+						}
+						type = U8T_FLOAT;
+						if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+							s->_token_truncated = true;
+						}
+						++s->_token_len;
+						next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+						s->_str = next;
+					} else if (peek_cp == U'e' || peek_cp == U'E') {
+						if (has_exponent) {
+							break;
+						}
+						if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+							s->_token_truncated = true;
+						}
+						++s->_token_len;
+						has_exponent = true;
+						next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+						s->_str = next;
+						peek_cp = u8t_scanner_peek(s);
+						if (peek_cp == U'+' || peek_cp == U'-') {
+							if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+								s->_token_truncated = true;
+							}
+							++s->_token_len;
+							next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+							s->_str = next;
+						}
+						continue;
+					} else if (peek_cp == U'+' || peek_cp == U'-') {
+						break;
+					} else {
+						break;
+					}
+				} else {
+					if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+						s->_token_truncated = true;
+					}
+					++s->_token_len;
+					next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+					s->_str = next;
+				}
+			}
+		} else {
+			// Standalone minus
+			type = cp;
+			if (!utf8catcodepoint(s->_token_text, cp, u8t_scanner_remaining(s))) {
+				s->_token_truncated = true;
+			}
+			s->_token_len = 1u;
 		}
 	} else {
 		type = cp;
