@@ -14,7 +14,7 @@ TEST(NullPointerHandling) {
 
 	size_t n;
 	const char* text = u8t_scanner_token_text(NULL, &n);
-	ASSERT_EQ(NULL, text, "NULL scanner should return NULL text");
+	ASSERT(text == NULL, "NULL scanner should return NULL text");
 }
 
 TEST(SingleCharacterTokens) {
@@ -145,7 +145,7 @@ TEST(MixedWhitespace) {
 TEST(AllAPIFunctionsWithNull) {
 	ASSERT_EQ(U8T_EOF, u8t_scanner_scan(NULL), "scan(NULL) returns EOF");
 	ASSERT_EQ(0, u8t_scanner_peek(NULL), "peek(NULL) returns 0");
-	ASSERT_EQ(NULL, u8t_scanner_token_text(NULL, NULL), "token_text(NULL) returns NULL");
+	ASSERT(u8t_scanner_token_text(NULL, NULL) == NULL, "token_text(NULL) returns NULL");
 	ASSERT_EQ(0, u8t_scanner_token_start(NULL), "token_start(NULL) returns 0");
 	ASSERT_EQ(0, u8t_scanner_token_len(NULL), "token_len(NULL) returns 0");
 	ASSERT_EQ(false, u8t_scanner_token_truncated(NULL), "token_truncated(NULL) returns false");
