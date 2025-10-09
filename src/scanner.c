@@ -178,11 +178,7 @@ char32_t u8t_scanner_peek(u8t_scanner* s) {
 		return 0;
 	}
 	utf8_int32_t cp;
-	const char* next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-	if (!next || *next == '\0') {
-		return 0;
-	}
-	utf8codepoint((const utf8_int8_t*)next, &cp);
+	utf8codepoint((const utf8_int8_t*)s->_str, &cp);
 	return cp;
 }
 
