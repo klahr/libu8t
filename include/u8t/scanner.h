@@ -9,9 +9,19 @@
 #define U8T_SCANNER_H
 
 #include <stdio.h>
-#include <uchar.h>
 #include <stddef.h>
 #include <stdbool.h>
+
+/* FreeBSD's <uchar.h> defines char8_t as a typedef, which conflicts with
+ * C++20's built-in char8_t type. We work around this by:
+ * - In C++20+: char8_t is built-in, char32_t is in <cuchar>
+ * - In C/older C++: include <uchar.h> for char32_t
+ */
+#if defined(__cplusplus) && __cplusplus >= 202002L
+#include <cuchar>
+#else
+#include <uchar.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
