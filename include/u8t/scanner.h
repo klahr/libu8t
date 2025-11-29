@@ -13,13 +13,10 @@
 #include <stdbool.h>
 
 /* FreeBSD's <uchar.h> defines char8_t as a typedef, which conflicts with
- * C++20's built-in char8_t type. We work around this by:
- * - In C++20+: char8_t is built-in, char32_t is in <cuchar>
- * - In C/older C++: include <uchar.h> for char32_t
+ * C++20's built-in char8_t type. In C++11+, char32_t is a built-in type,
+ * so we only need <uchar.h> for C code.
  */
-#if defined(__cplusplus) && __cplusplus >= 202002L
-#include <cuchar>
-#else
+#ifndef __cplusplus
 #include <uchar.h>
 #endif
 
