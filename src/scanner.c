@@ -11,6 +11,14 @@ static bool is_digit(char32_t c) {
 	return c >= U'0' && c <= U'9';
 }
 
+static bool is_hex_digit(char32_t c) {
+	return is_digit(c) || (c >= U'a' && c <= U'f') || (c >= U'A' && c <= U'F');
+}
+
+static bool is_binary_digit(char32_t c) {
+	return c == U'0' || c == U'1';
+}
+
 static bool is_identifier_start_default(char32_t c) {
 	return (c >= U'a' && c <= U'z') || (c >= U'A' && c <= U'Z') || c == U'_';
 }
@@ -94,6 +102,61 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		bool has_exponent = false;
 		type = U8T_INTEGER;
 		s->_str = next;
+
+		// Check for hex (0x) or binary (0b) prefix
+		if (cp == U'0') {
+			char32_t peek_cp = u8t_scanner_peek(s);
+			if (peek_cp == U'x' || peek_cp == U'X') {
+				// Hexadecimal integer
+				if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+					s->_token_truncated = true;
+				}
+				++s->_token_len;
+				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+				s->_str = next;
+				// Consume hex digits
+				for (;;) {
+					peek_cp = u8t_scanner_peek(s);
+					if (is_hex_digit(peek_cp)) {
+						if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+							s->_token_truncated = true;
+						}
+						++s->_token_len;
+						next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+						s->_str = next;
+					} else {
+						break;
+					}
+				}
+				s->_str = next;
+				return type;
+			} else if (peek_cp == U'b' || peek_cp == U'B') {
+				// Binary integer
+				if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+					s->_token_truncated = true;
+				}
+				++s->_token_len;
+				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+				s->_str = next;
+				// Consume binary digits
+				for (;;) {
+					peek_cp = u8t_scanner_peek(s);
+					if (is_binary_digit(peek_cp)) {
+						if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+							s->_token_truncated = true;
+						}
+						++s->_token_len;
+						next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+						s->_str = next;
+					} else {
+						break;
+					}
+				}
+				s->_str = next;
+				return type;
+			}
+		}
+
 		for (;;) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (!is_digit(peek_cp)) {
