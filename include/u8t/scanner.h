@@ -46,6 +46,7 @@ typedef struct u8t_scanner {
 	const char* _str;
 	size_t _token_start;
 	size_t _token_len;
+	size_t _token_text_pos;  // Current write position in _token_text (byte offset)
 	bool _token_truncated;
 	bool (*is_identifier_start)(char32_t c);
 	char _token_text[U8T_SCANNER_MAX_TOKEN_LEN];

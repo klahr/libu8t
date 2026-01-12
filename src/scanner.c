@@ -35,6 +35,7 @@ bool u8t_scanner_init(u8t_scanner* s, const char* str) {
 	s->_str = str;
 	s->_token_start = 0u;
 	s->_token_len = 0u;
+	s->_token_text_pos = 0u;
 	s->_token_text[0] = '\0';
 	s->_token_truncated = false;
 	s->is_identifier_start = is_identifier_start_default;
@@ -46,16 +47,37 @@ static size_t u8t_scanner_remaining(const u8t_scanner* s) {
 	if (!s) {
 		return 0u;
 	}
+	// Use tracked byte position instead of utf8len() for O(1) instead of O(n)
 	const size_t cap = (U8T_SCANNER_MAX_TOKEN_LEN > 0u) ? (U8T_SCANNER_MAX_TOKEN_LEN - 1u) : 0u;
-	const size_t used = utf8len(s->_token_text);
-	return (used < cap) ? (cap - used) : 0u;
+	return (s->_token_text_pos < cap) ? (cap - s->_token_text_pos) : 0u;
+}
+
+// Helper: append codepoint to token buffer and update position tracker
+// Returns true on success, false if truncated
+static bool scanner_append_cp(u8t_scanner* s, char32_t cp) {
+	size_t remaining = u8t_scanner_remaining(s);
+	if (remaining == 0) {
+		return false;
+	}
+	utf8_int8_t* result = utf8catcodepoint(
+		(utf8_int8_t*)(s->_token_text + s->_token_text_pos), cp, remaining);
+	if (!result) {
+		return false;
+	}
+	// Update position based on bytes written
+	s->_token_text_pos = (size_t)(result - (utf8_int8_t*)s->_token_text);
+	// Null-terminate (utf8catcodepoint doesn't do this)
+	s->_token_text[s->_token_text_pos] = '\0';
+	return true;
 }
 
 char32_t u8t_scanner_scan(u8t_scanner* s) {
 	if (!s) {
 		return U8T_EOF;
 	}
-	memset(s->_token_text, 0, sizeof(s->_token_text));
+	// Reset token buffer - just null-terminate at start instead of clearing all 2048 bytes
+	s->_token_text[0] = '\0';
+	s->_token_text_pos = 0u;
 	s->_token_start += s->_token_len;
 	s->_token_len = 0u;
 	s->_token_truncated = false;
@@ -75,7 +97,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 
 	char32_t type;
 	if (cp == U'"') {
-		if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), cp, u8t_scanner_remaining(s))) {
+		if (!scanner_append_cp(s, cp)) {
 			s->_token_truncated = true;
 		}
 		++s->_token_len;
@@ -86,7 +108,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			if (peek_cp == U'"' || peek_cp == 0) {
 				done = true;
 			}
-			if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+			if (!scanner_append_cp(s, peek_cp)) {
 				s->_token_truncated = true;
 			}
 			++s->_token_len;
@@ -95,7 +117,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		}
 		type = U8T_STRING;
 	} else if (is_digit(cp)) {
-		if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), cp, u8t_scanner_remaining(s))) {
+		if (!scanner_append_cp(s, cp)) {
 			s->_token_truncated = true;
 		}
 		++s->_token_len;
@@ -108,7 +130,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (peek_cp == U'x' || peek_cp == U'X') {
 				// Hexadecimal integer
-				if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+				if (!scanner_append_cp(s, peek_cp)) {
 					s->_token_truncated = true;
 				}
 				++s->_token_len;
@@ -118,7 +140,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 				for (;;) {
 					peek_cp = u8t_scanner_peek(s);
 					if (is_hex_digit(peek_cp)) {
-						if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+						if (!scanner_append_cp(s, peek_cp)) {
 							s->_token_truncated = true;
 						}
 						++s->_token_len;
@@ -132,7 +154,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 				return type;
 			} else if (peek_cp == U'b' || peek_cp == U'B') {
 				// Binary integer
-				if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+				if (!scanner_append_cp(s, peek_cp)) {
 					s->_token_truncated = true;
 				}
 				++s->_token_len;
@@ -142,7 +164,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 				for (;;) {
 					peek_cp = u8t_scanner_peek(s);
 					if (is_binary_digit(peek_cp)) {
-						if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+						if (!scanner_append_cp(s, peek_cp)) {
 							s->_token_truncated = true;
 						}
 						++s->_token_len;
@@ -165,7 +187,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 						break;
 					}
 					type = U8T_FLOAT;
-					if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+					if (!scanner_append_cp(s, peek_cp)) {
 						s->_token_truncated = true;
 					}
 					++s->_token_len;
@@ -175,7 +197,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 					if (has_exponent) {
 						break;
 					}
-					if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+					if (!scanner_append_cp(s, peek_cp)) {
 						s->_token_truncated = true;
 					}
 					++s->_token_len;
@@ -186,7 +208,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 					peek_cp = u8t_scanner_peek(s);
 					// Check for optional +/- after exponent marker
 					if (peek_cp == U'+' || peek_cp == U'-') {
-						if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+						if (!scanner_append_cp(s, peek_cp)) {
 							s->_token_truncated = true;
 						}
 						++s->_token_len;
@@ -201,7 +223,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 					break;
 				}
 			} else {
-				if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+				if (!scanner_append_cp(s, peek_cp)) {
 					s->_token_truncated = true;
 				}
 				++s->_token_len;
@@ -210,7 +232,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			}
 		}
 	} else if (s->is_identifier_start(cp)) {
-		if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), cp, u8t_scanner_remaining(s))) {
+		if (!scanner_append_cp(s, cp)) {
 			s->_token_truncated = true;
 		}
 		++s->_token_len;
@@ -219,7 +241,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		for (;;) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (s->is_identifier_start(peek_cp) || is_digit(peek_cp)) {
-				if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+				if (!scanner_append_cp(s, peek_cp)) {
 					s->_token_truncated = true;
 				}
 				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
@@ -235,7 +257,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		utf8codepoint((const utf8_int8_t*)next, &next_cp);
 		if (is_digit(next_cp)) {
 			// Negative number - duplicate the number scanning logic
-			if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), cp, u8t_scanner_remaining(s))) {
+			if (!scanner_append_cp(s, cp)) {
 				s->_token_truncated = true;
 			}
 			++s->_token_len;
@@ -250,7 +272,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 							break;
 						}
 						type = U8T_FLOAT;
-						if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+						if (!scanner_append_cp(s, peek_cp)) {
 							s->_token_truncated = true;
 						}
 						++s->_token_len;
@@ -260,7 +282,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 						if (has_exponent) {
 							break;
 						}
-						if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+						if (!scanner_append_cp(s, peek_cp)) {
 							s->_token_truncated = true;
 						}
 						++s->_token_len;
@@ -269,7 +291,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 						s->_str = next;
 						peek_cp = u8t_scanner_peek(s);
 						if (peek_cp == U'+' || peek_cp == U'-') {
-							if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+							if (!scanner_append_cp(s, peek_cp)) {
 								s->_token_truncated = true;
 							}
 							++s->_token_len;
@@ -283,7 +305,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 						break;
 					}
 				} else {
-					if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+					if (!scanner_append_cp(s, peek_cp)) {
 						s->_token_truncated = true;
 					}
 					++s->_token_len;
@@ -294,14 +316,14 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		} else {
 			// Standalone minus
 			type = cp;
-			if (!utf8catcodepoint(s->_token_text, cp, u8t_scanner_remaining(s))) {
+			if (!scanner_append_cp(s, cp)) {
 				s->_token_truncated = true;
 			}
 			s->_token_len = 1u;
 		}
 	} else {
 		type = cp;
-		if (!utf8catcodepoint(s->_token_text, cp, u8t_scanner_remaining(s))) {
+		if (!scanner_append_cp(s, cp)) {
 			s->_token_truncated = true;
 		}
 		s->_token_len = 1u;
