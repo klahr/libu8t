@@ -103,9 +103,14 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		++s->_token_len;
 		s->_str = next;
 		bool done = false;
+		bool escaped = false;
 		while (!done) {
 			char32_t peek_cp = u8t_scanner_peek(s);
-			if (peek_cp == U'"' || peek_cp == 0) {
+			if (escaped) {
+				escaped = false;
+			} else if (peek_cp == U'\\') {
+				escaped = true;
+			} else if (peek_cp == U'"' || peek_cp == 0) {
 				done = true;
 			}
 			if (!scanner_append_cp(s, peek_cp)) {

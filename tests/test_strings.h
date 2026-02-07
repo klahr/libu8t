@@ -46,6 +46,36 @@ TEST(ConsecutiveStrings) {
 	ASSERT_EQ(U8T_EOF, t, "EOF");
 }
 
+TEST(EscapedQuotes) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"hello \\\"world\\\"\"");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Should recognize string with escaped quotes");
+
+	size_t n;
+	ASSERT_STR_EQ("\"hello \\\"world\\\"\"", u8t_scanner_token_text(&s, &n),
+	              "Should contain full string with escaped quotes");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "Should be EOF after string");
+}
+
+TEST(EscapedBackslashBeforeQuote) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"end\\\\\"");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Should recognize string with escaped backslash");
+
+	size_t n;
+	ASSERT_STR_EQ("\"end\\\\\"", u8t_scanner_token_text(&s, &n),
+	              "Escaped backslash should not escape the closing quote");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "Should be EOF after string");
+}
+
 TEST(CustomIdentifierStart) {
 	u8t_scanner s;
 	u8t_scanner_init(&s, "$var @param");
