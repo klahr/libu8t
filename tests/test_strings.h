@@ -90,6 +90,51 @@ TEST(CustomIdentifierStart) {
 	ASSERT_EQ(U'@', t, "@ should be special char with default");
 }
 
+TEST(EscapedQuote) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"hello \\\"world\\\"\"");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Should recognize string with escaped quotes");
+
+	size_t n;
+	ASSERT_STR_EQ("\"hello \\\"world\\\"\"", u8t_scanner_token_text(&s, &n),
+	              "Should contain escaped quotes");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "Should be EOF after string");
+}
+
+TEST(EscapedBackslash) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"path\\\\\\\\\"");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Should recognize string with escaped backslashes");
+
+	size_t n;
+	ASSERT_STR_EQ("\"path\\\\\\\\\"", u8t_scanner_token_text(&s, &n),
+	              "Should contain escaped backslashes");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "Should be EOF after string");
+}
+
+TEST(EscapedBackslashQuote) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"test\\\\\\\"end\"");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Should recognize string with escaped backslash then quote");
+
+	size_t n;
+	ASSERT_STR_EQ("\"test\\\\\\\"end\"", u8t_scanner_token_text(&s, &n),
+	              "Should contain escaped backslash and quote");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "Should be EOF after string");
+}
+
 TEST(AdjacentOperators) {
 	u8t_scanner s;
 	u8t_scanner_init(&s, "++--==!=<=>===");

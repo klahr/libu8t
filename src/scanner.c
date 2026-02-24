@@ -112,6 +112,20 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 				escaped = true;
 			} else if (peek_cp == U'"' || peek_cp == 0) {
 				done = true;
+			} else if (peek_cp == U'\\') {
+				// Backslash: consume it, then unconditionally consume next char
+				// so that \" doesn't terminate the string
+				if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
+					s->_token_truncated = true;
+				}
+				++s->_token_len;
+				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+				s->_str = next;
+				peek_cp = u8t_scanner_peek(s);
+				if (peek_cp == 0) {
+					done = true;
+					continue;
+				}
 			}
 			if (!scanner_append_cp(s, peek_cp)) {
 				s->_token_truncated = true;
