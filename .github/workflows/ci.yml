@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  archlinux:
+    name: archlinux
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install packages
+        run: pacman -Syu --noconfirm --needed cmake debuginfod git valgrind
+
+      - uses: actions/checkout@v5
+        with:
+          path: libu8t
+
+      # The tests link against unit-check, which is not packaged anywhere;
+      # build and install it from source first.
+      - uses: actions/checkout@v5
+        with:
+          repository: klahr/unit-check
+          ref: "1.1.0"
+          path: unit-check
+
+      - name: Install unit-check
+        working-directory: unit-check
+        run: |
+          cmake -S . -B build
+          cmake --build build
+          cmake --install build
+
+      - name: Build
+        working-directory: libu8t
+        run: |
+          cmake -S . -B build
+          cmake --build build
+
+      - name: Run tests
+        working-directory: libu8t/build
+        run: ctest -j"$(nproc)" --output-on-failure
+
+      - name: Run valgrind
+        working-directory: libu8t/build
+        env:
+          DEBUGINFOD_URLS: https://debuginfod.archlinux.org
+        run: |
+          for test in tests/test_*; do
+            [ -x "$test" ] || continue
+            echo "::group::valgrind $test"
+            valgrind --leak-check=full --error-exitcode=1 "$test"
+            echo "::endgroup::"
+          done

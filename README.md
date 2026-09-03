@@ -13,7 +13,7 @@ Tokenizer C library with UTF-8 support.
 
 ## Install
 ```bash
-$ git clone https://git.sr.ht/~klahr/libu8t
+$ git clone https://github.com/klahr/libu8t
 $ cd libu8t/
 $ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 $ cmake --build build
@@ -98,7 +98,7 @@ $ doxygen Doxyfile
 ```
 
 ## Maintainers
-[~klahr](https://sr.ht/~klahr)
+[~klahr](https://github.com/klahr)
 
 ## Contributing
 We enthusiastically encourage and welcome contributions.
