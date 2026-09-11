@@ -21,6 +21,52 @@ TEST(UnclosedString) {
 	ASSERT(text != NULL, "Token text should not be NULL");
 }
 
+TEST(UnclosedStringScansToEof) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"unclosed");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Should recognize unclosed string");
+
+	size_t n;
+	ASSERT_STR_EQ("\"unclosed", u8t_scanner_token_text(&s, &n), "Should keep the scanned text");
+	ASSERT_EQ(9, n, "Token text is 9 codepoints");
+	ASSERT_EQ(9, u8t_scanner_token_len(&s), "Token length must match the text length");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "Scanner must stop at the terminator, not run past it");
+}
+
+TEST(UnclosedStringTrailingBackslash) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"abc\\");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Should recognize unclosed string ending in a backslash");
+
+	size_t n;
+	ASSERT_STR_EQ("\"abc\\", u8t_scanner_token_text(&s, &n), "Should keep the trailing backslash");
+	ASSERT_EQ(5, u8t_scanner_token_len(&s), "Token length must match the text length");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "Scanner must stop at the terminator, not run past it");
+}
+
+TEST(UnclosedStringQuoteOnly) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\"");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "A lone quote is an unclosed string");
+
+	size_t n;
+	ASSERT_STR_EQ("\"", u8t_scanner_token_text(&s, &n), "Should be just the quote");
+	ASSERT_EQ(1, u8t_scanner_token_len(&s), "Token length must match the text length");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "Scanner must stop at the terminator, not run past it");
+}
+
 TEST(EmptyString_Literal) {
 	u8t_scanner s;
 	u8t_scanner_init(&s, "\"\"");

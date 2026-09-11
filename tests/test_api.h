@@ -1,5 +1,7 @@
 #include <unit-check/uc.h>
 #include <u8t/scanner.h>
+#include <stdlib.h>
+#include <string.h>
 
 TEST(NullPointerHandling) {
 	bool result = u8t_scanner_init(NULL, "test");
@@ -121,6 +123,40 @@ TEST(LongStrings) {
 
 	ASSERT_EQ(U8T_STRING, t, "Should recognize as string");
 	ASSERT_EQ(true, u8t_scanner_token_truncated(&s), "Long string should be truncated");
+}
+
+TEST(TruncatedTokenTextIsAPrefix) {
+	const size_t pad = U8T_SCANNER_MAX_TOKEN_LEN - 3u;
+	char* src = malloc(U8T_SCANNER_MAX_TOKEN_LEN + 16u);
+	size_t i = 0u;
+	src[i++] = '"';
+	for (size_t k = 0u; k < pad; k++) {
+		src[i++] = 'a';
+	}
+	src[i++] = (char)0xC3;
+	src[i++] = (char)0xA4;
+	src[i++] = 'Z';
+	src[i++] = '"';
+	src[i] = '\0';
+
+	u8t_scanner s;
+	ASSERT(u8t_scanner_init(&s, src), "Scanner should initialize");
+
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_STRING, t, "Should recognize the string");
+	ASSERT_EQ(true, u8t_scanner_token_truncated(&s), "Token should be truncated");
+
+	size_t n;
+	const char* text = u8t_scanner_token_text(&s, &n);
+	ASSERT(strchr(text, 'Z') == NULL,
+	       "No character may be appended after the token has been truncated");
+	ASSERT(strstr(text, "\xC3\xA4") == NULL, "The codepoint that did not fit must be absent");
+	ASSERT_EQ('"', text[0], "Text must start where the token starts");
+	for (size_t k = 1u; k < strlen(text); k++) {
+		ASSERT_EQ('a', text[k], "Truncated text must be a prefix of the token");
+	}
+
+	free(src);
 }
 
 TEST(MixedWhitespace) {

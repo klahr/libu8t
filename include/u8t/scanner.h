@@ -32,10 +32,11 @@ extern "C" {
 //! Token types.
 enum {
 	U8T_EOF = 0,
-	U8T_IDENTIFIER,
+	U8T_IDENTIFIER = 0x200000,
 	U8T_INTEGER,
 	U8T_FLOAT,
 	U8T_STRING,
+	U8T_ERROR,
 };
 
 //! The scanner structure.

@@ -33,6 +33,46 @@ TEST(SpecialCharacters) {
 	}
 }
 
+TEST(ControlCharactersAreNotTokenTypes) {
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\001\002\003\004");
+
+	char32_t t;
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(0x0001, t, "U+0001 is returned as its own codepoint");
+	ASSERT(t != U8T_IDENTIFIER, "U+0001 must not be mistaken for an identifier");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(0x0002, t, "U+0002 is returned as its own codepoint");
+	ASSERT(t != U8T_INTEGER, "U+0002 must not be mistaken for an integer");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(0x0003, t, "U+0003 is returned as its own codepoint");
+	ASSERT(t != U8T_FLOAT, "U+0003 must not be mistaken for a float");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(0x0004, t, "U+0004 is returned as its own codepoint");
+	ASSERT(t != U8T_STRING, "U+0004 must not be mistaken for a string");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "End of input");
+}
+
+TEST(TokenTypesAreOutsideTheCodepointRange) {
+	ASSERT(U8T_IDENTIFIER > 0x1FFFFF, "U8T_IDENTIFIER is above any decodable codepoint");
+	ASSERT(U8T_INTEGER > 0x1FFFFF, "U8T_INTEGER is above any decodable codepoint");
+	ASSERT(U8T_FLOAT > 0x1FFFFF, "U8T_FLOAT is above any decodable codepoint");
+	ASSERT(U8T_STRING > 0x1FFFFF, "U8T_STRING is above any decodable codepoint");
+
+	u8t_scanner s;
+	u8t_scanner_init(&s, "\xF7\xBF\xBF\xBF");
+	char32_t t = u8t_scanner_scan(&s);
+	ASSERT_EQ(0x1FFFFF, t, "Highest decodable value comes back as a codepoint");
+	ASSERT(t != U8T_IDENTIFIER && t != U8T_INTEGER && t != U8T_FLOAT && t != U8T_STRING,
+	       "A codepoint must never collide with a token type");
+}
+
 TEST(NumbersStartingWithDecimal) {
 	u8t_scanner s;
 	u8t_scanner_init(&s, ".5 .123");

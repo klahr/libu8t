@@ -55,6 +55,9 @@ static size_t u8t_scanner_remaining(const u8t_scanner* s) {
 // Helper: append codepoint to token buffer and update position tracker
 // Returns true on success, false if truncated
 static bool scanner_append_cp(u8t_scanner* s, char32_t cp) {
+	if (s->_token_truncated) {
+		return false;
+	}
 	size_t remaining = u8t_scanner_remaining(s);
 	if (remaining == 0) {
 		return false;
@@ -83,16 +86,17 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 	s->_token_truncated = false;
 
 	utf8_int32_t cp = 0;
-	const char* next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-	if (cp == 0) {
-		return U8T_EOF;
-	}
-
-	if (cp == U' ' || cp == U'\t' || cp == U'\r' || cp == U'\n') {
+	const char* next;
+	for (;;) {
+		next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+		if (cp == 0) {
+			return U8T_EOF;
+		}
+		if (cp != U' ' && cp != U'\t' && cp != U'\r' && cp != U'\n') {
+			break;
+		}
 		s->_str = next;
-		s->_token_text[0] = cp;
-		s->_token_len = 1u;
-		return u8t_scanner_scan(s);
+		++s->_token_start;
 	}
 
 	char32_t type;
@@ -106,26 +110,15 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		bool escaped = false;
 		while (!done) {
 			char32_t peek_cp = u8t_scanner_peek(s);
+			if (peek_cp == 0) {
+				break;
+			}
 			if (escaped) {
 				escaped = false;
 			} else if (peek_cp == U'\\') {
 				escaped = true;
-			} else if (peek_cp == U'"' || peek_cp == 0) {
+			} else if (peek_cp == U'"') {
 				done = true;
-			} else if (peek_cp == U'\\') {
-				// Backslash: consume it, then unconditionally consume next char
-				// so that \" doesn't terminate the string
-				if (!utf8catcodepoint(s->_token_text + strlen(s->_token_text), peek_cp, u8t_scanner_remaining(s))) {
-					s->_token_truncated = true;
-				}
-				++s->_token_len;
-				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-				s->_str = next;
-				peek_cp = u8t_scanner_peek(s);
-				if (peek_cp == 0) {
-					done = true;
-					continue;
-				}
 			}
 			if (!scanner_append_cp(s, peek_cp)) {
 				s->_token_truncated = true;
@@ -141,6 +134,8 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		}
 		++s->_token_len;
 		bool has_exponent = false;
+		bool has_fraction = false;
+		bool malformed = false;
 		type = U8T_INTEGER;
 		s->_str = next;
 
@@ -156,9 +151,11 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
 				s->_str = next;
 				// Consume hex digits
+				bool has_digits = false;
 				for (;;) {
 					peek_cp = u8t_scanner_peek(s);
 					if (is_hex_digit(peek_cp)) {
+						has_digits = true;
 						if (!scanner_append_cp(s, peek_cp)) {
 							s->_token_truncated = true;
 						}
@@ -170,7 +167,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 					}
 				}
 				s->_str = next;
-				return type;
+				return has_digits ? type : (char32_t)U8T_ERROR;
 			} else if (peek_cp == U'b' || peek_cp == U'B') {
 				// Binary integer
 				if (!scanner_append_cp(s, peek_cp)) {
@@ -180,9 +177,11 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
 				s->_str = next;
 				// Consume binary digits
+				bool has_digits = false;
 				for (;;) {
 					peek_cp = u8t_scanner_peek(s);
 					if (is_binary_digit(peek_cp)) {
+						has_digits = true;
 						if (!scanner_append_cp(s, peek_cp)) {
 							s->_token_truncated = true;
 						}
@@ -194,7 +193,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 					}
 				}
 				s->_str = next;
-				return type;
+				return has_digits ? type : (char32_t)U8T_ERROR;
 			}
 		}
 
@@ -202,9 +201,10 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (!is_digit(peek_cp)) {
 				if (peek_cp == U'.') {
-					if (type == U8T_FLOAT) {
+					if (has_fraction) {
 						break;
 					}
+					has_fraction = true;
 					type = U8T_FLOAT;
 					if (!scanner_append_cp(s, peek_cp)) {
 						s->_token_truncated = true;
@@ -233,6 +233,12 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 						++s->_token_len;
 						next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
 						s->_str = next;
+						peek_cp = u8t_scanner_peek(s);
+					}
+					if (is_digit(peek_cp)) {
+						type = U8T_FLOAT;
+					} else {
+						malformed = true;
 					}
 					continue;
 				} else if (peek_cp == U'+' || peek_cp == U'-') {
@@ -249,6 +255,9 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
 				s->_str = next;
 			}
+		}
+		if (malformed) {
+			type = U8T_ERROR;
 		}
 	} else if (s->is_identifier_start(cp)) {
 		if (!scanner_append_cp(s, cp)) {
@@ -281,15 +290,18 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			}
 			++s->_token_len;
 			bool has_exponent = false;
+			bool has_fraction = false;
+			bool malformed = false;
 			type = U8T_INTEGER;
 			s->_str = next;
 			for (;;) {
 				char32_t peek_cp = u8t_scanner_peek(s);
 				if (!is_digit(peek_cp)) {
 					if (peek_cp == U'.') {
-						if (type == U8T_FLOAT) {
+						if (has_fraction) {
 							break;
 						}
+						has_fraction = true;
 						type = U8T_FLOAT;
 						if (!scanner_append_cp(s, peek_cp)) {
 							s->_token_truncated = true;
@@ -316,6 +328,12 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 							++s->_token_len;
 							next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
 							s->_str = next;
+							peek_cp = u8t_scanner_peek(s);
+						}
+						if (is_digit(peek_cp)) {
+							type = U8T_FLOAT;
+						} else {
+							malformed = true;
 						}
 						continue;
 					} else if (peek_cp == U'+' || peek_cp == U'-') {
@@ -331,6 +349,9 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 					next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
 					s->_str = next;
 				}
+			}
+			if (malformed) {
+				type = U8T_ERROR;
 			}
 		} else {
 			// Standalone minus
