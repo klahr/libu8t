@@ -74,6 +74,43 @@ static bool scanner_append_cp(u8t_scanner* s, char32_t cp) {
 	return true;
 }
 
+static bool scanner_scan_radix_literal(u8t_scanner* s, char32_t* result) {
+	char32_t peek_cp = u8t_scanner_peek(s);
+	const bool is_hex = (peek_cp == U'x' || peek_cp == U'X');
+	const bool is_bin = (peek_cp == U'b' || peek_cp == U'B');
+	if (!is_hex && !is_bin) {
+		return false;
+	}
+
+	utf8_int32_t cp;
+	const char* next;
+	if (!scanner_append_cp(s, peek_cp)) {
+		s->_token_truncated = true;
+	}
+	++s->_token_len;
+	next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+	s->_str = next;
+
+	bool has_digits = false;
+	for (;;) {
+		peek_cp = u8t_scanner_peek(s);
+		if (is_hex ? is_hex_digit(peek_cp) : is_binary_digit(peek_cp)) {
+			has_digits = true;
+			if (!scanner_append_cp(s, peek_cp)) {
+				s->_token_truncated = true;
+			}
+			++s->_token_len;
+			next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+			s->_str = next;
+		} else {
+			break;
+		}
+	}
+
+	*result = has_digits ? (char32_t)U8T_INTEGER : (char32_t)U8T_ERROR;
+	return true;
+}
+
 char32_t u8t_scanner_scan(u8t_scanner* s) {
 	if (!s) {
 		return U8T_EOF;
@@ -141,62 +178,11 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 
 		// Check for hex (0x) or binary (0b) prefix
 		if (cp == U'0') {
-			char32_t peek_cp = u8t_scanner_peek(s);
-			if (peek_cp == U'x' || peek_cp == U'X') {
-				// Hexadecimal integer
-				if (!scanner_append_cp(s, peek_cp)) {
-					s->_token_truncated = true;
-				}
-				++s->_token_len;
-				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-				s->_str = next;
-				// Consume hex digits
-				bool has_digits = false;
-				for (;;) {
-					peek_cp = u8t_scanner_peek(s);
-					if (is_hex_digit(peek_cp)) {
-						has_digits = true;
-						if (!scanner_append_cp(s, peek_cp)) {
-							s->_token_truncated = true;
-						}
-						++s->_token_len;
-						next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-						s->_str = next;
-					} else {
-						break;
-					}
-				}
-				s->_str = next;
-				return has_digits ? type : (char32_t)U8T_ERROR;
-			} else if (peek_cp == U'b' || peek_cp == U'B') {
-				// Binary integer
-				if (!scanner_append_cp(s, peek_cp)) {
-					s->_token_truncated = true;
-				}
-				++s->_token_len;
-				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-				s->_str = next;
-				// Consume binary digits
-				bool has_digits = false;
-				for (;;) {
-					peek_cp = u8t_scanner_peek(s);
-					if (is_binary_digit(peek_cp)) {
-						has_digits = true;
-						if (!scanner_append_cp(s, peek_cp)) {
-							s->_token_truncated = true;
-						}
-						++s->_token_len;
-						next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-						s->_str = next;
-					} else {
-						break;
-					}
-				}
-				s->_str = next;
-				return has_digits ? type : (char32_t)U8T_ERROR;
+			char32_t radix_result;
+			if (scanner_scan_radix_literal(s, &radix_result)) {
+				return radix_result;
 			}
 		}
-
 		for (;;) {
 			char32_t peek_cp = u8t_scanner_peek(s);
 			if (!is_digit(peek_cp)) {
@@ -284,7 +270,7 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 		utf8_int32_t next_cp;
 		utf8codepoint((const utf8_int8_t*)next, &next_cp);
 		if (is_digit(next_cp)) {
-			// Negative number - duplicate the number scanning logic
+			// Negative number
 			if (!scanner_append_cp(s, cp)) {
 				s->_token_truncated = true;
 			}
@@ -294,6 +280,23 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			bool malformed = false;
 			type = U8T_INTEGER;
 			s->_str = next;
+
+			// Consume the leading digit, which puts the scanner in the same state the
+			// positive path above reaches, so the radix prefix is handled by the same code.
+			if (!scanner_append_cp(s, next_cp)) {
+				s->_token_truncated = true;
+			}
+			++s->_token_len;
+			next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
+			s->_str = next;
+
+			if (next_cp == U'0') {
+				char32_t radix_result;
+				if (scanner_scan_radix_literal(s, &radix_result)) {
+					return radix_result;
+				}
+			}
+
 			for (;;) {
 				char32_t peek_cp = u8t_scanner_peek(s);
 				if (!is_digit(peek_cp)) {

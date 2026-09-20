@@ -21,6 +21,56 @@ TEST(NegativeNumbers) {
 	ASSERT_STR_EQ("-0", u8t_scanner_token_text(&s, &n), "Should be -0");
 }
 
+TEST(NegativeRadixLiterals) {
+	u8t_scanner s;
+	char32_t t;
+	size_t n;
+
+	// The negative path used to carry its own copy of the number scanner without the
+	// radix prefix, so these came back as the integer -0 followed by an identifier.
+	u8t_scanner_init(&s, "-0x10 -0b101 -0XFF -0B1111");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Negative hex is an integer");
+	ASSERT_STR_EQ("-0x10", u8t_scanner_token_text(&s, &n), "Should be -0x10");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Negative binary is an integer");
+	ASSERT_STR_EQ("-0b101", u8t_scanner_token_text(&s, &n), "Should be -0b101");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Uppercase X is accepted");
+	ASSERT_STR_EQ("-0XFF", u8t_scanner_token_text(&s, &n), "Should be -0XFF");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "Uppercase B is accepted");
+	ASSERT_STR_EQ("-0B1111", u8t_scanner_token_text(&s, &n), "Should be -0B1111");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_EOF, t, "Nothing left over");
+
+	// A prefix with no digits is an error, as it is for the positive form.
+	u8t_scanner_init(&s, "-0x");
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_ERROR, t, "-0x with no digits is an error");
+	ASSERT_STR_EQ("-0x", u8t_scanner_token_text(&s, &n), "Error token keeps the scanned text");
+
+	// A leading zero that is not a radix prefix still scans as decimal.
+	u8t_scanner_init(&s, "-01 -0.5 -0e3");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_INTEGER, t, "-01 is a decimal integer");
+	ASSERT_STR_EQ("-01", u8t_scanner_token_text(&s, &n), "Should be -01");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_FLOAT, t, "-0.5 is a float");
+	ASSERT_STR_EQ("-0.5", u8t_scanner_token_text(&s, &n), "Should be -0.5");
+
+	t = u8t_scanner_scan(&s);
+	ASSERT_EQ(U8T_FLOAT, t, "-0e3 is a float");
+	ASSERT_STR_EQ("-0e3", u8t_scanner_token_text(&s, &n), "Should be -0e3");
+}
+
 TEST(ScientificNotation) {
 	u8t_scanner s;
 	u8t_scanner_init(&s, "1e5 2.5E-3 3.14e+10 6.022E+23");
