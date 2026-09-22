@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.15)
 project (u8t
 	VERSION
-		1.2.0
+		1.4.2
 	DESCRIPTION
 		"libu8t C library"
 	LANGUAGES
