@@ -74,6 +74,15 @@ static bool scanner_append_cp(u8t_scanner* s, char32_t cp) {
 	return true;
 }
 
+static void scanner_take_cp(u8t_scanner* s, char32_t peek_cp, const char** next, utf8_int32_t* cp) {
+	if (!scanner_append_cp(s, peek_cp)) {
+		s->_token_truncated = true;
+	}
+	++s->_token_len;
+	*next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, cp);
+	s->_str = *next;
+}
+
 static bool scanner_scan_radix_literal(u8t_scanner* s, char32_t* result) {
 	char32_t peek_cp = u8t_scanner_peek(s);
 	const bool is_hex = (peek_cp == U'x' || peek_cp == U'X');
@@ -94,21 +103,70 @@ static bool scanner_scan_radix_literal(u8t_scanner* s, char32_t* result) {
 	bool has_digits = false;
 	for (;;) {
 		peek_cp = u8t_scanner_peek(s);
-		if (is_hex ? is_hex_digit(peek_cp) : is_binary_digit(peek_cp)) {
-			has_digits = true;
-			if (!scanner_append_cp(s, peek_cp)) {
-				s->_token_truncated = true;
-			}
-			++s->_token_len;
-			next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-			s->_str = next;
-		} else {
+		if (!(is_hex ? is_hex_digit(peek_cp) : is_binary_digit(peek_cp))) {
 			break;
 		}
+		has_digits = true;
+		scanner_take_cp(s, peek_cp, &next, &cp);
 	}
 
 	*result = has_digits ? (char32_t)U8T_INTEGER : (char32_t)U8T_ERROR;
 	return true;
+}
+
+static char32_t scanner_scan_number_body(u8t_scanner* s, char32_t first_digit, const char** next, utf8_int32_t* cp) {
+	// Check for hex (0x) or binary (0b) prefix
+	if (first_digit == U'0') {
+		char32_t radix_result;
+		if (scanner_scan_radix_literal(s, &radix_result)) {
+			*next = s->_str;
+			return radix_result;
+		}
+	}
+
+	bool has_exponent = false;
+	bool has_fraction = false;
+	bool malformed = false;
+	char32_t type = U8T_INTEGER;
+
+	for (;;) {
+		char32_t peek_cp = u8t_scanner_peek(s);
+		if (is_digit(peek_cp)) {
+			scanner_take_cp(s, peek_cp, next, cp);
+			continue;
+		}
+		if (peek_cp == U'.') {
+			if (has_fraction) {
+				break;
+			}
+			has_fraction = true;
+			type = U8T_FLOAT;
+			scanner_take_cp(s, peek_cp, next, cp);
+			continue;
+		}
+		if (peek_cp == U'e' || peek_cp == U'E') {
+			if (has_exponent) {
+				break;
+			}
+			has_exponent = true;
+			scanner_take_cp(s, peek_cp, next, cp);
+			// The sign of an exponent is part of the number; a sign anywhere else ends it.
+			peek_cp = u8t_scanner_peek(s);
+			if (peek_cp == U'+' || peek_cp == U'-') {
+				scanner_take_cp(s, peek_cp, next, cp);
+				peek_cp = u8t_scanner_peek(s);
+			}
+			if (is_digit(peek_cp)) {
+				type = U8T_FLOAT;
+			} else {
+				malformed = true;
+			}
+			continue;
+		}
+		break;
+	}
+
+	return malformed ? (char32_t)U8T_ERROR : type;
 }
 
 char32_t u8t_scanner_scan(u8t_scanner* s) {
@@ -170,81 +228,8 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 			s->_token_truncated = true;
 		}
 		++s->_token_len;
-		bool has_exponent = false;
-		bool has_fraction = false;
-		bool malformed = false;
-		type = U8T_INTEGER;
 		s->_str = next;
-
-		// Check for hex (0x) or binary (0b) prefix
-		if (cp == U'0') {
-			char32_t radix_result;
-			if (scanner_scan_radix_literal(s, &radix_result)) {
-				return radix_result;
-			}
-		}
-		for (;;) {
-			char32_t peek_cp = u8t_scanner_peek(s);
-			if (!is_digit(peek_cp)) {
-				if (peek_cp == U'.') {
-					if (has_fraction) {
-						break;
-					}
-					has_fraction = true;
-					type = U8T_FLOAT;
-					if (!scanner_append_cp(s, peek_cp)) {
-						s->_token_truncated = true;
-					}
-					++s->_token_len;
-					next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-					s->_str = next;
-				} else if (peek_cp == U'e' || peek_cp == U'E') {
-					if (has_exponent) {
-						break;
-					}
-					if (!scanner_append_cp(s, peek_cp)) {
-						s->_token_truncated = true;
-					}
-					++s->_token_len;
-					has_exponent = true;
-					// Advance to check for optional sign after exponent
-					next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-					s->_str = next;
-					peek_cp = u8t_scanner_peek(s);
-					// Check for optional +/- after exponent marker
-					if (peek_cp == U'+' || peek_cp == U'-') {
-						if (!scanner_append_cp(s, peek_cp)) {
-							s->_token_truncated = true;
-						}
-						++s->_token_len;
-						next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-						s->_str = next;
-						peek_cp = u8t_scanner_peek(s);
-					}
-					if (is_digit(peek_cp)) {
-						type = U8T_FLOAT;
-					} else {
-						malformed = true;
-					}
-					continue;
-				} else if (peek_cp == U'+' || peek_cp == U'-') {
-					// Only allow +/- after exponent, not in middle of number
-					break;
-				} else {
-					break;
-				}
-			} else {
-				if (!scanner_append_cp(s, peek_cp)) {
-					s->_token_truncated = true;
-				}
-				++s->_token_len;
-				next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-				s->_str = next;
-			}
-		}
-		if (malformed) {
-			type = U8T_ERROR;
-		}
+		type = scanner_scan_number_body(s, cp, &next, &cp);
 	} else if (s->is_identifier_start(cp)) {
 		if (!scanner_append_cp(s, cp)) {
 			s->_token_truncated = true;
@@ -275,87 +260,12 @@ char32_t u8t_scanner_scan(u8t_scanner* s) {
 				s->_token_truncated = true;
 			}
 			++s->_token_len;
-			bool has_exponent = false;
-			bool has_fraction = false;
-			bool malformed = false;
-			type = U8T_INTEGER;
 			s->_str = next;
 
-			// Consume the leading digit, which puts the scanner in the same state the
-			// positive path above reaches, so the radix prefix is handled by the same code.
-			if (!scanner_append_cp(s, next_cp)) {
-				s->_token_truncated = true;
-			}
-			++s->_token_len;
-			next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-			s->_str = next;
-
-			if (next_cp == U'0') {
-				char32_t radix_result;
-				if (scanner_scan_radix_literal(s, &radix_result)) {
-					return radix_result;
-				}
-			}
-
-			for (;;) {
-				char32_t peek_cp = u8t_scanner_peek(s);
-				if (!is_digit(peek_cp)) {
-					if (peek_cp == U'.') {
-						if (has_fraction) {
-							break;
-						}
-						has_fraction = true;
-						type = U8T_FLOAT;
-						if (!scanner_append_cp(s, peek_cp)) {
-							s->_token_truncated = true;
-						}
-						++s->_token_len;
-						next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-						s->_str = next;
-					} else if (peek_cp == U'e' || peek_cp == U'E') {
-						if (has_exponent) {
-							break;
-						}
-						if (!scanner_append_cp(s, peek_cp)) {
-							s->_token_truncated = true;
-						}
-						++s->_token_len;
-						has_exponent = true;
-						next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-						s->_str = next;
-						peek_cp = u8t_scanner_peek(s);
-						if (peek_cp == U'+' || peek_cp == U'-') {
-							if (!scanner_append_cp(s, peek_cp)) {
-								s->_token_truncated = true;
-							}
-							++s->_token_len;
-							next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-							s->_str = next;
-							peek_cp = u8t_scanner_peek(s);
-						}
-						if (is_digit(peek_cp)) {
-							type = U8T_FLOAT;
-						} else {
-							malformed = true;
-						}
-						continue;
-					} else if (peek_cp == U'+' || peek_cp == U'-') {
-						break;
-					} else {
-						break;
-					}
-				} else {
-					if (!scanner_append_cp(s, peek_cp)) {
-						s->_token_truncated = true;
-					}
-					++s->_token_len;
-					next = (const char*)utf8codepoint((const utf8_int8_t*)s->_str, &cp);
-					s->_str = next;
-				}
-			}
-			if (malformed) {
-				type = U8T_ERROR;
-			}
+			// Consume the leading digit, which puts the scanner in the state the positive
+			// path above reaches, so the rest of the number is one shared path.
+			scanner_take_cp(s, next_cp, &next, &cp);
+			type = scanner_scan_number_body(s, next_cp, &next, &cp);
 		} else {
 			// Standalone minus
 			type = cp;
