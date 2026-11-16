@@ -103,5 +103,11 @@ $ doxygen Doxyfile
 ## Contributing
 We enthusiastically encourage and welcome contributions.
 
+## License
+This project is licensed under the GNU General Public License, version 3 or
+(at your option) any later version. See [COPYING](COPYING) for the full text.
+
+SPDX-License-Identifier: GPL-3.0-or-later
+
 [nova-r8]: https://git.sr.ht/~klahr/nova-r8
 
